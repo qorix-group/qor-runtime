@@ -90,7 +90,7 @@ jobs:
           fi
           echo "echo4"
           jq --arg folder "$DOCS_FOLDER" --argjson subs "$SUBFOLDERS_JSON" \
-            '. + {($folder): ( .[$folder] // [] | . + $subs | unique )}' cargo-docs/cargo_docs.json > tmp.json
+            '. + {($folder): ( .[$folder] // [] | . + $subs | unique )}' docs/cargo_docs.json > tmp.json
           mv tmp.json docs/cargo_docs.json
 
           #debug purpose

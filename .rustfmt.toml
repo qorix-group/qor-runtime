@@ -1,0 +1,5 @@
+# rust formatter rules.
+# check configuration fields here: https://rust-lang.github.io/rustfmt/?version=v1.6.0&search=
+
+# added as a demo
+tab_spaces = 4

@@ -1,0 +1,31 @@
+name: Rust FMT and Clippy check
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    types: [opened, ready_for_review, reopened, synchronize]
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+
+      - name: Check code format (rustfmt)
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: -- --check
+
+      - name: Run Clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -D warnings

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Docs</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif; 
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f4f4f4;
+    }
+    .container {
+      text-align: center;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    .button-group, .dropdown-group {
+      margin-bottom: 20px;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 15px;
+      border: none;
+      background: #007BFF;
+      color: white;
+      cursor: pointer;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    select {
+      padding: 8px;
+      font-size: 16px;
+    }
+    #content {
+      margin-top: 20px;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Project Documentation</h1>
+    <div class="button-group" id="buttonGroup">
+      <button onclick="showCargoDocs()">Cargo Docs</button>
+      <button onclick="showSphinxDocs()">Sphinx Docs</button>
+    </div>
+    <!-- This dropdown container will be re-used for both types -->
+    <div id="dropdownGroup" class="dropdown-group" style="display: none;">
+      <!-- The content (label + select) is inserted dynamically -->
+    </div>
+    <div id="content"></div>
+  </div>
+
+  <script>
+    let cargoData = {};
+    let sphinxData = {};
+
+    // For Cargo docs: fetch cargo_docs.json and then list available sub-documents.
+    function showCargoDocs() {
+      fetch('cargo-docs/cargo_docs.json')
+        .then(response => response.json())
+        .then(data => {
+          cargoData = data;
+          const buttonGroup = document.getElementById('buttonGroup');
+          const dropdownGroup = document.getElementById('dropdownGroup');
+
+          // Hide the buttons and set up the Cargo docs dropdown.
+          buttonGroup.style.display = 'none';
+          dropdownGroup.style.display = 'block';
+          dropdownGroup.innerHTML = `
+            <label for="cargoDropdown">Select Cargo Docs:</label>
+            <select id="cargoDropdown" onchange="updateLinks()">
+              <option value="">Select a version</option>
+            </select>
+          `;
+          const cargoDropdown = document.getElementById('cargoDropdown');
+          Object.keys(data).forEach(docFolder => {
+            const option = document.createElement('option');
+            option.value = docFolder;
+            option.textContent = docFolder;
+            cargoDropdown.appendChild(option);
+          });
+        })
+        .catch(err => {
+          console.error(err);
+          document.getElementById('content').innerHTML = '<p>Error loading cargo_docs.json</p>';
+        });
+    }
+
+    // When a Cargo docs version is selected, list links for each sub-folder.
+    function updateLinks() {
+      const selectedVersion = document.getElementById('cargoDropdown').value;
+      const content = document.getElementById('content');
+      content.innerHTML = '';
+      
+      if (selectedVersion && cargoData[selectedVersion]) {
+        let listItems = '';
+        cargoData[selectedVersion].forEach(sub => {
+          // Link opens in the current tab.
+          const link = `./cargo-docs/${selectedVersion}/${sub}/index.html`;
+          listItems += `<li><a href="${link}">${sub}</a></li>`;
+        });
+        
+        content.innerHTML = `<h2>${selectedVersion}</h2><ul>${listItems}</ul>`;
+      }
+    }
+
+    // For Sphinx docs: fetch sphinx_docs.json and populate a dropdown.
+    // When a version is selected, immediately open its index.html in the current tab.
+    function showSphinxDocs() {
+      fetch('sphinx-docs/sphinx_docs.json')
+        .then(response => response.json())
+        .then(data => {
+          sphinxData = data;
+          const buttonGroup = document.getElementById('buttonGroup');
+          const dropdownGroup = document.getElementById('dropdownGroup');
+
+          // Hide the buttons and set up the Sphinx docs dropdown.
+          buttonGroup.style.display = 'none';
+          dropdownGroup.style.display = 'block';
+          dropdownGroup.innerHTML = `
+            <label for="sphinxDropdown">Select Sphinx Docs:</label>
+            <select id="sphinxDropdown" onchange="updateSphinxDocs()">
+              <option value="">Select a version</option>
+            </select>
+          `;
+          const sphinxDropdown = document.getElementById('sphinxDropdown');
+          Object.keys(data).forEach(version => {
+            const option = document.createElement('option');
+            option.value = version;
+            option.textContent = version;
+            sphinxDropdown.appendChild(option);
+          });
+        })
+        .catch(err => {
+          console.error(err);
+          document.getElementById('content').innerHTML = '<p>Error loading sphinx_docs.json</p>';
+        });
+    }
+
+    // When a Sphinx docs version is selected, open its index.html in the current tab.
+    function updateSphinxDocs() {
+      const selectedVersion = document.getElementById('sphinxDropdown').value;
+      if (selectedVersion) {
+        const link = `./sphinx-docs/${selectedVersion}/index.html`;
+        window.location.href = link;
+      }
+    }
+  </script>
+</body>
+</html>

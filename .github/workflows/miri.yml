@@ -1,0 +1,35 @@
+name: Miri checker
+#Run Miri to check for undefined behavior in Rust code.
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+        types: [opened, ready_for_review, reopened, synchronize ]
+
+jobs:
+    miri:
+        name: "Run Miri - the undefined behavior detector"
+        # don't run it for draft PRs
+        if: github.event.pull_request.draft == false
+        runs-on: ubuntu-latest
+        steps:
+          - name: Checkout sources
+            uses: actions/checkout@v4
+    
+          - name: Install Miri
+            run: |
+              rustup toolchain install nightly --component miri
+              rustup override set nightly
+              cargo miri setup
+    
+          - name: Run Miri and Save Report
+            run: |
+              cargo miri test --workspace > miri_report.txt 2>&1
+    
+          - name: Upload Miri Report
+            uses: actions/upload-artifact@v4
+            with:
+              name: miri-report
+              path: miri_report.txt

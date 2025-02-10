@@ -1,0 +1,27 @@
+#!/bin/bash
+#
+# This script is intended to be used as a git pre-commit hook.
+# It checks all files are currently staged in git on a file by file basis with rustfmt
+
+HAS_ISSUES=0
+
+for file in $(git diff --name-only --staged); do
+	if [[ $file == *.rs ]]; then
+		rustfmt --check --edition 2021 $file 2>/dev/null
+		FMT_RESULT=$?
+		if [ $FMT_RESULT -ne 0 ]; then
+			if [ $HAS_ISSUES -eq 0 ]; then
+				echo "The files"
+			fi
+			echo "$file"
+			HAS_ISSUES=1
+		fi
+	fi
+done
+
+if [ $HAS_ISSUES -eq 0 ]; then
+    exit 0
+fi
+
+echo "have formatting issues. Format your code with \`cargo fmt\` or call \`rustfmt\` manually on affected files and then stage it. You can view the changes you should make with \`cargo fmt --check\` or \`rustfmt --check <file>\`."
+exit 1

@@ -71,14 +71,14 @@ jobs:
             echo "creating new cargo-docs/cargo_docs.json"
             echo "{}" > cargo-docs/cargo_docs.json
           fi
-
+          echo "echo1"
           # Identify the folder name where docs are placed
           DOCS_FOLDER="${{ env.DOCS_FOLDER }}"
-
+          echo "echo2"
           # Find all subfolders in the *current* doc directory matching "qor_*"
           # (Adjust the pattern or path as needed)
           SUBFOLDERS=$(find "cargo-docs/$DOCS_FOLDER" -maxdepth 1 -type d -name "qor_*" -printf '%f\n')
-      
+          echo "echo3"
           # Convert SUBFOLDERS (a newline-separated list) into a JSON array
           # e.g. ["qor_com", "qor_core", ...]
           if [ -n "$SUBFOLDERS" ]; then
@@ -86,7 +86,7 @@ jobs:
           else
             SUBFOLDERS_JSON="[]"
           fi
-
+          echo "echo4"
           jq --arg folder "$DOCS_FOLDER" --argjson subs "$SUBFOLDERS_JSON" \
             '. + {($folder): ( .[$folder] // [] | . + $subs | unique )}' cargo-docs/cargo_docs.json > tmp.json
           mv tmp.json cargo-docs/cargo_docs.json

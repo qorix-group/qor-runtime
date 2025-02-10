@@ -85,7 +85,7 @@ jobs:
           fi
 
           DOCS_FOLDER="${{ env.DOCS_FOLDER }}"
-
+          touch docs/$DOCS_FOLDER/.nojekyll
           # Mark this folder as deployed = true
           jq --arg folder "$DOCS_FOLDER" \
             '. + {($folder): true}' docs/sphinx_docs.json > tmp.json

@@ -68,9 +68,8 @@ jobs:
           git checkout origin/gh-pages -- cargo-docs/cargo_docs.json || true
 
           if [ ! -f cargo-docs/cargo_docs.json ]; then
-            echo "creating new cargo-docs/cargo_docs.json"
+            echo "creating new docs/cargo_docs.json"
             echo "{}" > docs/cargo_docs.json
-            mv cargo-docs/cargo_docs.json docs/cargo_docs.json
           else
             mv cargo-docs/cargo_docs.json docs/cargo_docs.json
           fi

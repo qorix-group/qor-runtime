@@ -60,9 +60,6 @@ jobs:
 
       - name: Update versions cargo_docs.json
         run: |
-          # Create the deploy_root directory if needed
-          mkdir -p deploy_root
-
           # Fetch the existing cargo_docs.json from gh-pages (if it exists)
           git fetch origin gh-pages --depth 1
           git checkout origin/gh-pages -- cargo-docs/cargo_docs.json || true
@@ -73,14 +70,14 @@ jobs:
           else
             mv cargo-docs/cargo_docs.json docs/cargo_docs.json
           fi
-          echo "echo1"
+
           # Identify the folder name where docs are placed
           DOCS_FOLDER="${{ env.DOCS_FOLDER }}"
-          echo "echo2"
+
           # Find all subfolders in the *current* doc directory matching "qor_*"
           # (Adjust the pattern or path as needed)
           SUBFOLDERS=$(find "docs/$DOCS_FOLDER" -maxdepth 1 -type d -name "qor_*" -printf '%f\n')
-          echo "echo3"
+
           # Convert SUBFOLDERS (a newline-separated list) into a JSON array
           # e.g. ["qor_com", "qor_core", ...]
           if [ -n "$SUBFOLDERS" ]; then
@@ -88,7 +85,7 @@ jobs:
           else
             SUBFOLDERS_JSON="[]"
           fi
-          echo "echo4"
+
           jq --arg folder "$DOCS_FOLDER" --argjson subs "$SUBFOLDERS_JSON" \
             '. + {($folder): ( .[$folder] // [] | . + $subs | unique )}' docs/cargo_docs.json > tmp.json
           mv tmp.json docs/cargo_docs.json

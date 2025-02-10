@@ -14,19 +14,18 @@ use std::{
 };
 
 pub struct Executor {
-    engine: Engine
+    engine: Engine,
 }
 
 impl Executor {
     //should take the task chain as input later
     pub fn new() -> Self {
         Self {
-            engine:Engine::default()
+            engine: Engine::default(),
         }
     }
 
-
-    pub fn init(&self){
+    pub fn init(&self) {
         self.engine.start().unwrap();
 
         let name = "Activity1a";
@@ -34,21 +33,18 @@ impl Executor {
         let init_event_ack = IpcEvent::new(&format!("{name}_init_ack"));
 
         let pgminit = Program::new().with_action(
-                Sequence::new()
-                    .with_step(Trigger::new(init_event.notifier().unwrap()))
-                    .with_step(Sync::new(init_event_ack.listener().unwrap())),
+            Sequence::new()
+                .with_step(Trigger::new(init_event.notifier().unwrap()))
+                .with_step(Sync::new(init_event_ack.listener().unwrap())),
         );
 
         let handle = pgminit.spawn(&self.engine).unwrap();
 
         // Wait for the program to finish
         let _ = handle.join().unwrap();
-
-
     }
 
     pub fn run(&self) {
-
         let timer_event = SingleEvent::new();
         // our simulation period
         const PERIOD: Duration = Duration::from_millis(500);
@@ -64,7 +60,6 @@ impl Executor {
         let name = "Activity1a";
         let step_event = IpcEvent::new(&format!("{name}_step"));
         let step_event_ack = IpcEvent::new(&format!("{name}_step_ack"));
-
 
         let pgminit = Program::new().with_action(
             ForRange::new(10).with_body(
@@ -88,28 +83,23 @@ impl Executor {
         println!("Done");
     }
 
-    pub fn terminate(&self){
-
+    pub fn terminate(&self) {
         let name = "Activity1a";
         let term_event = IpcEvent::new(&format!("{name}_term"));
         let term_event_ack = IpcEvent::new(&format!("{name}_term_ack"));
 
         let pgminit = Program::new().with_action(
-                Sequence::new()
-                    .with_step(Trigger::new(term_event.notifier().unwrap()))
-                    .with_step(Sync::new(term_event_ack.listener().unwrap())),
+            Sequence::new()
+                .with_step(Trigger::new(term_event.notifier().unwrap()))
+                .with_step(Sync::new(term_event_ack.listener().unwrap())),
         );
 
         let handle = pgminit.spawn(&self.engine).unwrap();
-
 
         // Wait for the program to finish
         let _ = handle.join().unwrap();
 
         // Engine shutdown
         self.engine.shutdown().unwrap();
-
     }
-
-
 }

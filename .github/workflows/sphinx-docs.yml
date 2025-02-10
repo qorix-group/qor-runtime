@@ -74,12 +74,14 @@ jobs:
         run: |
           # Pull down the existing sphinx_docs.json from gh-pages (if exists)
           git fetch origin gh-pages --depth 1
-          git checkout origin/gh-pages -- sphinx_docs.json || true
-          mv sphinx_docs.json docs/sphinx_docs.json || true
-
+          git checkout origin/gh-pages -- sphinx-docs/sphinx_docs.json || true
+          
           # If it doesn't exist, create an empty JSON object
-          if [ ! -f docs/sphinx_docs.json ]; then
+          if [ ! -f sphinx-docs/sphinx_docs.json ]; then
+            echo "creating new docs/sphinx_docs.json"
             echo "{}" > docs/sphinx_docs.json
+          else
+            mv sphinx-docs/sphinx_docs.json docs/sphinx_docs.json || true
           fi
 
           DOCS_FOLDER="${{ env.DOCS_FOLDER }}"

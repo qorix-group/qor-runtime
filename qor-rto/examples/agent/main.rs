@@ -20,7 +20,7 @@ use agent::Agent;
 
 fn main() {
     let act = Arc::new(Mutex::new(Activity::new("activity1a")));
-    let agent=Agent::new();
+    let agent = Agent::new();
     agent.init(&act);
     agent.run(&act);
     agent.terminate(&act);

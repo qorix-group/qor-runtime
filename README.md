@@ -1,12 +1,17 @@
 # Qorix Runtime
 
-![Build](https://github.com/qorix-group/performance_stack_rust/actions/workflows/rust.yml/badge.svg)
-![Format](https://github.com/qorix-group/performance_stack_rust/actions/workflows/rustfmt.yml/badge.svg)
-![Lint](https://github.com/qorix-group/performance_stack_rust/actions/workflows/gitlint.yml/badge.svg)
-![Miri](https://github.com/qorix-group/performance_stack_rust/actions/workflows/miri.yml/badge.svg)
+![Build](https://github.com/qorix-group/qor-runtime/actions/workflows/rust.yml/badge.svg)
+![Format](https://github.com/qorix-group/qor-runtime/actions/workflows/rustfmt.yml/badge.svg)
+![Lint](https://github.com/qorix-group/qor-runtime/actions/workflows/gitlint.yml/badge.svg)
+![Miri](https://github.com/qorix-group/qor-runtime/actions/workflows/miri.yml/badge.svg)
 
 
 ## Overview
+
+## ⚠️ Disclaimer: Work in Progress (WIP)
+
+Open sourcing for SCORE project.
+
 
 This is the **Runtime implemented in Rust**. It is provided as
 an open source library that is mainly focused on the automotive industry.

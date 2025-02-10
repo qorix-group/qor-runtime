@@ -17,9 +17,9 @@ pub mod executor;
 use executor::Executor;
 
 fn main() {
-let exec = Executor::new();
+    let exec = Executor::new();
 
-exec.init();
-exec.run();
-exec.terminate();
+    exec.init();
+    exec.run();
+    exec.terminate();
 }

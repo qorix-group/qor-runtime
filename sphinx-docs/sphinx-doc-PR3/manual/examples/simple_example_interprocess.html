@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+
+<html lang="Rust" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Simple Inter-process Example &#8212; Runtime draft documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=a7dc471f"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Task Chain Example" href="task_chain.html" />
+    <link rel="prev" title="Runtime Concepts" href="../concepts.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="simple-inter-process-example">
+<h1>Simple Inter-process Example<a class="headerlink" href="#simple-inter-process-example" title="Link to this heading">¶</a></h1>
+<section id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Link to this heading">¶</a></h2>
+<p>This example shows how to use runtime to have a task chain across OS process. It has a program called camera driver and
+a program called object detection.</p>
+<p>We want to achieve the below task flow.</p>
+<img alt="../../_images/camera_object_design.PNG" src="../../_images/camera_object_design.PNG" />
+<p>Run camera driver and object detection in two different os processes and map them respective engines.</p>
+<img alt="../../_images/camera_obj_deploy.PNG" src="../../_images/camera_obj_deploy.PNG" />
+</section>
+<section id="code-walkthrough">
+<h2>Code Walkthrough<a class="headerlink" href="#code-walkthrough" title="Link to this heading">¶</a></h2>
+<section id="camera-driver">
+<h3>camera_driver<a class="headerlink" href="#camera-driver" title="Link to this heading">¶</a></h3>
+<p>At first we import with use keyword to get the required qor-runtime items into scope.</p>
+<div class="highlight-rust notranslate"><div class="highlight"><pre><span></span><span class="c1">//Imports the required qor-runtime items to be used in this scope</span>
+<span class="k">use</span><span class="w"> </span><span class="n">qor_rto</span><span class="p">::</span><span class="n">prelude</span><span class="p">::</span><span class="o">*</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>Create a instance of camera driver. Then create a timer event and a event for triggering object detection.</p>
+<div class="highlight-rust notranslate"><div class="highlight"><pre><span></span><span class="c1">//create a instance of camera driver</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">camdrv</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Arc</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">Mutex</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">CameraDriver</span><span class="p">::</span><span class="n">new</span><span class="p">()));</span>
+
+<span class="c1">// timer syncronization event</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">timer_event</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">SingleEvent</span><span class="p">::</span><span class="n">new</span><span class="p">();</span>
+
+<span class="c1">// Event to trigger obejct detection</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">start_obj_det</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">IpcEvent</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="s">&quot;start_event&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>Create a engine to run the camera driver program.</p>
+<div class="highlight-rust notranslate"><div class="highlight"><pre><span></span><span class="c1">// The engine is the central runtime executor</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">engine</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Engine</span><span class="p">::</span><span class="n">default</span><span class="p">();</span>
+<span class="n">engine</span><span class="p">.</span><span class="n">start</span><span class="p">().</span><span class="n">unwrap</span><span class="p">();</span>
+</pre></div>
+</div>
+<p>Create a program to simulate the timer behavior.</p>
+<div class="highlight-rust notranslate"><div class="highlight"><pre><span></span><span class="c1">// our simulation period</span>
+<span class="k">const</span><span class="w"> </span><span class="n">PERIOD</span><span class="p">:</span><span class="w"> </span><span class="nc">Duration</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Duration</span><span class="p">::</span><span class="n">from_millis</span><span class="p">(</span><span class="mi">500</span><span class="p">);</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">tim_prog</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Program</span><span class="p">::</span><span class="n">new</span><span class="p">().</span><span class="n">with_action</span><span class="p">(</span>
+<span class="w">    </span><span class="n">Loop</span><span class="p">::</span><span class="n">new</span><span class="p">().</span><span class="n">with_body</span><span class="p">(</span>
+<span class="w">        </span><span class="n">Sequence</span><span class="p">::</span><span class="n">new</span><span class="p">()</span>
+<span class="w">            </span><span class="p">.</span><span class="n">with_step</span><span class="p">(</span><span class="n">Sleep</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">PERIOD</span><span class="p">))</span>
+<span class="w">            </span><span class="p">.</span><span class="n">with_step</span><span class="p">(</span><span class="n">Trigger</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">timer_event</span><span class="p">.</span><span class="n">notifier</span><span class="p">().</span><span class="n">unwrap</span><span class="p">())),</span>
+<span class="w">    </span><span class="p">),</span>
+<span class="p">);</span>
+</pre></div>
+</div>
+<p>Create a program to run the camera driver according to the flow shown above.
+For this we use a Loop action to run continuously and a sequence action to tell that when a timer event comes run the
+functions(like CameraDriver::read_input) in a sequence and trigger object detection.</p>
+<div class="highlight-rust notranslate"><div class="highlight"><pre><span></span><span class="c1">// Camera Driver Program</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">program1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Program</span><span class="p">::</span><span class="n">new</span><span class="p">().</span><span class="n">with_action</span><span class="p">(</span>
+<span class="w">    </span><span class="n">Loop</span><span class="p">::</span><span class="n">new</span><span class="p">().</span><span class="n">with_body</span><span class="p">(</span>
+<span class="w">        </span><span class="n">Sequence</span><span class="p">::</span><span class="n">new</span><span class="p">()</span>
+<span class="w">            </span><span class="p">.</span><span class="n">with_step</span><span class="p">(</span><span class="nb">Sync</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">timer_event</span><span class="p">.</span><span class="n">listener</span><span class="p">().</span><span class="n">unwrap</span><span class="p">()))</span>
+<span class="w">            </span><span class="p">.</span><span class="n">with_step</span><span class="p">(</span><span class="n">Await</span><span class="p">::</span><span class="n">new_method_mut</span><span class="p">(</span><span class="o">&amp;</span><span class="n">camdrv</span><span class="p">,</span><span class="w"> </span><span class="n">CameraDriver</span><span class="p">::</span><span class="n">read_input</span><span class="p">))</span>
+<span class="w">            </span><span class="p">.</span><span class="n">with_step</span><span class="p">(</span><span class="n">Await</span><span class="p">::</span><span class="n">new_method_mut</span><span class="p">(</span><span class="o">&amp;</span><span class="n">camdrv</span><span class="p">,</span><span class="w"> </span><span class="n">CameraDriver</span><span class="p">::</span><span class="n">process</span><span class="p">))</span>
+<span class="w">            </span><span class="p">.</span><span class="n">with_step</span><span class="p">(</span><span class="n">Await</span><span class="p">::</span><span class="n">new_method_mut</span><span class="p">(</span><span class="o">&amp;</span><span class="n">camdrv</span><span class="p">,</span><span class="w"> </span><span class="n">CameraDriver</span><span class="p">::</span><span class="n">write_output</span><span class="p">))</span>
+<span class="w">            </span><span class="p">.</span><span class="n">with_step</span><span class="p">(</span><span class="n">Trigger</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">start_obj_det</span><span class="p">.</span><span class="n">notifier</span><span class="p">().</span><span class="n">unwrap</span><span class="p">())),</span>
+<span class="w">    </span><span class="p">),</span>
+<span class="p">);</span>
+</pre></div>
+</div>
+<p>Here we wait for the program to complete and then shutdown the engine.</p>
+<div class="highlight-rust notranslate"><div class="highlight"><pre><span></span><span class="c1">// Spawn the program on the engine</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">handle1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">program1</span><span class="p">.</span><span class="n">spawn</span><span class="p">(</span><span class="o">&amp;</span><span class="n">engine</span><span class="p">).</span><span class="n">unwrap</span><span class="p">();</span>
+
+<span class="kd">let</span><span class="w"> </span><span class="n">handle2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tim_prog</span><span class="p">.</span><span class="n">spawn</span><span class="p">(</span><span class="o">&amp;</span><span class="n">engine</span><span class="p">).</span><span class="n">unwrap</span><span class="p">();</span>
+
+<span class="c1">// Wait for the program to finish</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">handle1</span><span class="p">.</span><span class="n">join</span><span class="p">().</span><span class="n">unwrap</span><span class="p">();</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">handle2</span><span class="p">.</span><span class="n">join</span><span class="p">().</span><span class="n">unwrap</span><span class="p">();</span>
+
+<span class="c1">// Engine shutdown</span>
+<span class="n">engine</span><span class="p">.</span><span class="n">shutdown</span><span class="p">().</span><span class="n">unwrap</span><span class="p">();</span>
+</pre></div>
+</div>
+</section>
+<section id="object-detection">
+<h3>Object Detection<a class="headerlink" href="#object-detection" title="Link to this heading">¶</a></h3>
+<p>At first we import with use keyword to get the required qor-runtime items into scope.</p>
+<div class="highlight-rust notranslate"><div class="highlight"><pre><span></span><span class="c1">//Imports the required qor-runtime items to be used in this scope</span>
+<span class="k">use</span><span class="w"> </span><span class="n">qor_rto</span><span class="p">::</span><span class="n">prelude</span><span class="p">::</span><span class="o">*</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>Create a instance of object detection. Then create a event for listening/syncing to  start of object detection.</p>
+<div class="highlight-rust notranslate"><div class="highlight"><pre><span></span><span class="c1">//create a instance of camera driver</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">objdet</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Arc</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">Mutex</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">ObjectDetection</span><span class="p">::</span><span class="n">new</span><span class="p">()));</span>
+
+<span class="c1">// Event to trigger obejct detection</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">start_obj_det</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">IpcEvent</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="s">&quot;start_event&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>Create a engine to run the camera driver program.</p>
+<div class="highlight-rust notranslate"><div class="highlight"><pre><span></span><span class="c1">// The engine is the central runtime executor</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">engine</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Engine</span><span class="p">::</span><span class="n">default</span><span class="p">();</span>
+<span class="n">engine</span><span class="p">.</span><span class="n">start</span><span class="p">().</span><span class="n">unwrap</span><span class="p">();</span>
+</pre></div>
+</div>
+<p>Create a program to run the object detection according to the flow shown above.
+For this we use a Loop action to run continuously and a sequence action to tell that when a start event comes the
+flow runs a sequence and internally after pre_processing there is a Concurrency action used to allow drive_q1, drive_q2 and
+drive_q3 to run parallel if resources are available.</p>
+<div class="highlight-rust notranslate"><div class="highlight"><pre><span></span><span class="c1">// object detection program</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">program</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Program</span><span class="p">::</span><span class="n">new</span><span class="p">().</span><span class="n">with_action</span><span class="p">(</span>
+<span class="w">    </span><span class="n">Loop</span><span class="p">::</span><span class="n">new</span><span class="p">().</span><span class="n">with_body</span><span class="p">(</span>
+<span class="w">        </span><span class="n">Sequence</span><span class="p">::</span><span class="n">new</span><span class="p">()</span>
+<span class="w">            </span><span class="p">.</span><span class="n">with_step</span><span class="p">(</span><span class="nb">Sync</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">start_obj_det</span><span class="p">.</span><span class="n">listener</span><span class="p">().</span><span class="n">unwrap</span><span class="p">()))</span>
+<span class="w">            </span><span class="p">.</span><span class="n">with_step</span><span class="p">(</span><span class="n">Await</span><span class="p">::</span><span class="n">new_method_mut</span><span class="p">(</span>
+<span class="w">                </span><span class="o">&amp;</span><span class="n">objdet</span><span class="p">,</span>
+<span class="w">                </span><span class="n">ObjectDetection</span><span class="p">::</span><span class="n">pre_processing</span><span class="p">,</span>
+<span class="w">            </span><span class="p">))</span>
+<span class="w">            </span><span class="p">.</span><span class="n">with_step</span><span class="p">(</span>
+<span class="w">                </span><span class="n">Concurrency</span><span class="p">::</span><span class="n">new</span><span class="p">()</span>
+<span class="w">                    </span><span class="p">.</span><span class="n">with_branch</span><span class="p">(</span><span class="n">Await</span><span class="p">::</span><span class="n">new_method_mut</span><span class="p">(</span><span class="o">&amp;</span><span class="n">objdet</span><span class="p">,</span><span class="w"> </span><span class="n">ObjectDetection</span><span class="p">::</span><span class="n">drive_q1</span><span class="p">))</span>
+<span class="w">                    </span><span class="p">.</span><span class="n">with_branch</span><span class="p">(</span><span class="n">Await</span><span class="p">::</span><span class="n">new_method_mut</span><span class="p">(</span><span class="o">&amp;</span><span class="n">objdet</span><span class="p">,</span><span class="w"> </span><span class="n">ObjectDetection</span><span class="p">::</span><span class="n">drive_q2</span><span class="p">))</span>
+<span class="w">                    </span><span class="p">.</span><span class="n">with_branch</span><span class="p">(</span><span class="n">Await</span><span class="p">::</span><span class="n">new_method_mut</span><span class="p">(</span><span class="o">&amp;</span><span class="n">objdet</span><span class="p">,</span><span class="w"> </span><span class="n">ObjectDetection</span><span class="p">::</span><span class="n">drive_q3</span><span class="p">)),</span>
+<span class="w">            </span><span class="p">)</span>
+<span class="w">            </span><span class="p">.</span><span class="n">with_step</span><span class="p">(</span><span class="n">Await</span><span class="p">::</span><span class="n">new_method_mut</span><span class="p">(</span>
+<span class="w">                </span><span class="o">&amp;</span><span class="n">objdet</span><span class="p">,</span>
+<span class="w">                </span><span class="n">ObjectDetection</span><span class="p">::</span><span class="n">object_fusion</span><span class="p">,</span>
+<span class="w">            </span><span class="p">)),</span>
+<span class="w">    </span><span class="p">),</span>
+<span class="p">);</span>
+</pre></div>
+</div>
+<p>Here we wait for the program to complete and then shutdown the engine.</p>
+<div class="highlight-rust notranslate"><div class="highlight"><pre><span></span><span class="c1">// Spawn the program on the engine</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">handle1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">program1</span><span class="p">.</span><span class="n">spawn</span><span class="p">(</span><span class="o">&amp;</span><span class="n">engine</span><span class="p">).</span><span class="n">unwrap</span><span class="p">();</span>
+
+<span class="kd">let</span><span class="w"> </span><span class="n">handle2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tim_prog</span><span class="p">.</span><span class="n">spawn</span><span class="p">(</span><span class="o">&amp;</span><span class="n">engine</span><span class="p">).</span><span class="n">unwrap</span><span class="p">();</span>
+
+<span class="c1">// Wait for the program to finish</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">handle1</span><span class="p">.</span><span class="n">join</span><span class="p">().</span><span class="n">unwrap</span><span class="p">();</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">handle2</span><span class="p">.</span><span class="n">join</span><span class="p">().</span><span class="n">unwrap</span><span class="p">();</span>
+
+<span class="c1">// Engine shutdown</span>
+<span class="n">engine</span><span class="p">.</span><span class="n">shutdown</span><span class="p">().</span><span class="n">unwrap</span><span class="p">();</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="how-to-run-the-code">
+<h2>How to Run the Code<a class="headerlink" href="#how-to-run-the-code" title="Link to this heading">¶</a></h2>
+<p>In two different terminals run</p>
+<p><code class="docutils literal notranslate"><span class="pre">`bash</span>
+<span class="pre">cargo</span> <span class="pre">r</span> <span class="pre">--example</span> <span class="pre">object_detection</span>
+<span class="pre">`</span></code>
+<code class="docutils literal notranslate"><span class="pre">`bash</span>
+<span class="pre">cargo</span> <span class="pre">r</span> <span class="pre">--example</span> <span class="pre">camera_driver</span>
+<span class="pre">`</span></code></p>
+</section>
+<section id="output">
+<h2>Output<a class="headerlink" href="#output" title="Link to this heading">¶</a></h2>
+<img alt="../../_images/cam_obj_output.PNG" src="../../_images/cam_obj_output.PNG" />
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Runtime</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../runtime.html">What is Runtime?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concepts.html">Runtime Concepts</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Simple Inter-process Example</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#code-walkthrough">Code Walkthrough</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#how-to-run-the-code">How to Run the Code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#output">Output</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="task_chain.html">Task Chain Example</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../concepts.html" title="previous chapter">Runtime Concepts</a></li>
+      <li>Next: <a href="task_chain.html" title="next chapter">Task Chain Example</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025 Qorix GmbH.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../_sources/manual/examples/simple_example_interprocess.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

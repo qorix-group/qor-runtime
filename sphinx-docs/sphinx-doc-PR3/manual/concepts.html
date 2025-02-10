@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+
+<html lang="Rust" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Runtime Concepts &#8212; Runtime draft documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=a7dc471f"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Simple Inter-process Example" href="examples/simple_example_interprocess.html" />
+    <link rel="prev" title="Getting Started" href="getting_started.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="runtime-concepts">
+<span id="id1"></span><h1>Runtime Concepts<a class="headerlink" href="#runtime-concepts" title="Link to this heading">¶</a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
+<p>We will now define the main entities of the Runtime framework, some of which have already been partially used in the example above.</p>
+<p><strong>Task</strong>: A task is a light weight, self-contained unit that can be executed independently. Tasks are typically smaller and more numerous than threads, but rather than being managed by the OS scheduler, they are managed by the Runtime.</p>
+<p><strong>Routine</strong>: Routine is a user defined function or a closure which can passed to a task. In Rust this could be <cite>fn</cite>, <cite>fnonce</cite> or <cite>fnmut</cite>.</p>
+<p>For use cases such as running tasks in a linear order, executing tasks based on a condition, or running tasks in a loop, users can utilize Actions.</p>
+<p><strong>Actions</strong>: Actions are building blocks that can be used to define the execution flow of tasks.</p>
+<ul class="simple">
+<li><p><strong>Sequence</strong>: Executes all contained actions sequentially.</p></li>
+<li><p><strong>Concurrency</strong>: Executes multiple branches concurrently, with each branch representing an individual action. The action completes when all branches have finished execution.</p></li>
+<li><p><strong>Computation</strong>: Similar to Concurrency, with the distinction that the action concludes when any single branch has finished execution.</p></li>
+<li><p><strong>IfThenElse</strong>: Evaluates a condition and executes either the <cite>true</cite> action or the <cite>false</cite> action accordingly.</p></li>
+<li><p><strong>Loop</strong>: Repeats execution of all contained actions.</p></li>
+<li><p><strong>Break</strong>: Exits the loop it is currently in.</p></li>
+<li><p><strong>For</strong>: Iterates over its body a fixed number of times. An exit condition is not always necessary in a Loop. However, one can use the Loop in conjunction with a Computation, for instance, to let it &quot;terminate&quot; on some exit condition.</p></li>
+<li><p><strong>TryCatch</strong>: Executes a try action and catches exceptions based on a specified exception mask. If an exception matching the mask occurs, the catch action is executed.</p></li>
+<li><p><strong>Throw</strong>: Throws an exception with an optional timeout.</p></li>
+<li><p><strong>Invoke</strong>: Executes a task synchronously in the caller's context.</p></li>
+<li><p><strong>Await</strong>: Executes a task asynchronously.</p></li>
+<li><p><strong>Sync</strong>: Completes execution upon the occurrence of a specified event (happening).</p></li>
+<li><p><strong>Trigger</strong>: Triggers a specified event (happening).</p></li>
+<li><p><strong>Sleep</strong>: Completes execution after a specified duration has elapsed.</p></li>
+</ul>
+<p>The Runtime framework allows combining/linking the actions to describe an execution flow, thereby forming a higher-level construct referred to as a Program.</p>
+<p><strong>Program</strong>: A program is an entity used to construct an execution flow through the use of Actions. To facilitate the creation of scalable and complex systems, Programs can be chained up using Syncs and Triggers to synchronize the execution order.</p>
+<p>To synchronize on the execution flow based on happening, users can use Events.</p>
+<p><strong>Events</strong>: Events describe a happening and are passed to Sync and Trigger actions. They are used to link actions across Programs that are chained up across memory/process boundaries. For example, an event can be utilized across process boundaries to link the Sync action of Program A with the Trigger action of Program B, which is deployed on a different  OS processes.</p>
+<p><strong>Engine</strong>: An engine is the entity which abstracts the OS resources like threads, CPU affinity etc. and runs the tasks.</p>
+<blockquote>
+<div><p>Cooperative Task Execution:</p>
+</div></blockquote>
+<ul class="simple">
+<li><p>Tasks are added to the queue and the worker threads pull the tasks, when a task on the thread cannot progress anymore and yields.</p></li>
+<li><p>Tasks run in a cooperative manner, thereby minimizing the overhead associated with thread context switching.</p></li>
+<li><p>Ensures efficient resource utilization by allowing other tasks to execute while waiting.</p></li>
+</ul>
+<section id="functional-overview">
+<h3>Functional Overview<a class="headerlink" href="#functional-overview" title="Link to this heading">¶</a></h3>
+<p>The following diagram shows an overview of Program's actions.</p>
+<img alt="../_images/programs_actions.drawio.svg" src="../_images/programs_actions.drawio.svg" />
+<p>A visual representation of an example Program configuration is presented in the following image.</p>
+<img alt="../_images/camera_program_conf.png" src="../_images/camera_program_conf.png" />
+<p>A visual representation of how programs are deployed on os process and internals of engine.</p>
+<img alt="../_images/system_architecture_with_runtime.drawio.svg" src="../_images/system_architecture_with_runtime.drawio.svg" />
+</section>
+<section id="engine">
+<h3>Engine<a class="headerlink" href="#engine" title="Link to this heading">¶</a></h3>
+<p>The most important entity of the Runtime framework is the Engine, which is responsible for running Programs.</p>
+</section>
+<section id="implementation-in-a-nutshell">
+<h3>Implementation In a Nutshell<a class="headerlink" href="#implementation-in-a-nutshell" title="Link to this heading">¶</a></h3>
+<p>Since a Program is also a task for the Engine, multiple Programs can be mapped to an Engine, which executes them using cooperative multitasking. Rust's async model is used to run these tasks. In Rust, defining an async block creates a future. Unlike in other languages, a Rust future does not represent a background computation; instead, it embodies the computation itself. The future's owner is responsible for progressing execution by polling it using Future::poll.
+In this case, the Program's core functionality is an async block that returns a future. This future is polled to drive the Program forward. Internally, it contains actions, and each action's respective functionality is executed as the future advances.</p>
+</section>
+<section id="execution-scenarios">
+<h3>Execution scenarios<a class="headerlink" href="#execution-scenarios" title="Link to this heading">¶</a></h3>
+<blockquote>
+<div><ul class="simple">
+<li><p>Cooperative task execution</p></li>
+</ul>
+</div></blockquote>
+<p>For tasks that primarily wait for a trigger from an event, such as the Sync action linked to a notifier-event model, the execution follows a cooperative approach. When a task is unable to proceed due to waiting for an event, other tasks continue to run until the waiting task is activated by the event—this activation may be initiated by another action or an external program. This summary outlines how the Engine schedules and run tasks through task switching rather than thread switching.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Concurrent execution using worker pool</p></li>
+</ul>
+</div></blockquote>
+<p>For CPU-bound, computationally intensive tasks, the Engine provides a worker pool. The Await action allows marking tasks as CPU-bound, signaling that they should be handled differently. The Engine then enqueues these tasks and passes them to a thread pool. The worker pool pulls tasks from this queue and executes them, ensuring efficient utilization of system resources.</p>
+<ul class="simple">
+<li><p>Parallel execution</p></li>
+</ul>
+<p>For use cases involving independent tasks that can run in parallel based on available resources, the Concurrency action, along with the Await action, can be used to define this behavior in the Program.
+The Engine executes all Await actions within the Concurrency action block in separate threads by passing them to the worker queue. Meanwhile, the Engine monitors the progress of the Concurrency action without blocking the main/supervisor thread, as other tasks continue running cooperatively. This ensures efficient parallel execution while maintaining overall system responsiveness.</p>
+<ul class="simple">
+<li><p>Priority-based execution</p></li>
+</ul>
+<p>For Programs with different priorities—such as those mapped to different ASIL (Automotive Safety Integrity Level) levels from the safety concept—multiple Engines can be used. Each Program can be assigned to a specific Engine, and the Engine's priority attribute ensures that higher-priority Programs (tasks) run on higher-priority threads compared to lower-priority Programs. This prioritization mechanism helps manage execution based on criticality, ensuring that safety-critical tasks receive the necessary processing resources.</p>
+</section>
+</section>
+<section id="interfaces">
+<h2>Interfaces<a class="headerlink" href="#interfaces" title="Link to this heading">¶</a></h2>
+<section id="qor-rto-prelude">
+<h3>qor_rto::prelude<a class="headerlink" href="#qor-rto-prelude" title="Link to this heading">¶</a></h3>
+<p>The <strong>mod</strong>: <code class="docutils literal notranslate"><span class="pre">qor_rto::prelude</span></code> provides all the <strong>crates</strong> needed for the users to develop application using Runtime.</p>
+</section>
+<section id="api-reference">
+<h3>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading">¶</a></h3>
+<p>Please refer to API documentation in the source code.</p>
+</section>
+<section id="typical-development-flow-with-runtime">
+<h3>Typical development flow with Runtime<a class="headerlink" href="#typical-development-flow-with-runtime" title="Link to this heading">¶</a></h3>
+<p>In traditional multi-threaded application development, developers are tasked with managing various aspects such as thread management, resource allocation, synchronization, and Task dependencies. However, with the utilization of <cite>Runtime</cite>, developers are relieved from these responsibilities and can focus solely on the application logic in terms of <cite>Tasks</cite>, i.e., <cite>Routines</cite>.</p>
+<p>Application development using the Runtime framework involves the following steps:</p>
+<ul class="simple">
+<li><p>Splitting functionality into Programs to define the execution flow.</p></li>
+<li><p>Developing Programs using tasks and leveraging actions to structure their execution order.</p></li>
+<li><p>Registering tasks, state variables, and other necessary components.</p></li>
+</ul>
+<p>Subsequently:</p>
+<ul class="simple">
+<li><p>Deploy the Programs on the Engine to execute them.</p></li>
+<li><p>Configure the Engine with task, thread, and CPU information for optimal execution.</p></li>
+</ul>
+<p><strong>Configuration</strong>:
+There are two main configurations:
+- The program configuration that contains actions and is configurable using the Program builders in the code.
+- The engine configuration that consists of number of threads, priority and core affinity. It is configurable using the Engine builder in the code.</p>
+<p>Program: The Program can be configured in the code using the Program builders with the actions described above.</p>
+<p>Engine: The engined can be configured in the code using the Engine builder with number of threads, priority and core affinity.</p>
+</section>
+</section>
+<section id="tracing">
+<h2>Tracing<a class="headerlink" href="#tracing" title="Link to this heading">¶</a></h2>
+<p>In the future, the Runtime will include support for tracing of control flow and visualizing trace data with Trace Compass/Eclipse. The plugin provided by the Runtime will analyze trace data from both kernel and user spaces, providing visualizations as shown in the image below.</p>
+<img alt="../_images/runtime_tracing.drawio.svg" src="../_images/runtime_tracing.drawio.svg" />
+<p>This will help to debug and fine tune deployment configuration.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Runtime</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="runtime.html">What is Runtime?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Runtime Concepts</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="examples/simple_example_interprocess.html">Simple Inter-process Example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples/task_chain.html">Task Chain Example</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="getting_started.html" title="previous chapter">Getting Started</a></li>
+      <li>Next: <a href="examples/simple_example_interprocess.html" title="next chapter">Simple Inter-process Example</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025 Qorix GmbH.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/manual/concepts.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

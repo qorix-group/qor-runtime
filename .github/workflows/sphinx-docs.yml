@@ -94,6 +94,7 @@ jobs:
 
           echo "Updated docs/sphinx_docs.json:"
           cat docs/sphinx_docs.json
+          touch docs/.nojekyll
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4

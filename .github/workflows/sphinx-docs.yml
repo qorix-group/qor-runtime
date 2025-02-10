@@ -77,8 +77,8 @@ jobs:
           git checkout origin/gh-pages -- sphinx-docs/sphinx_docs.json || true
           
           # If it doesn't exist, create an empty JSON object
-          if [ ! -f docs/sphinx_docs.json ]; then
-            echo "creating new docs/cargo_docs.json"
+          if [ ! -f sphinx-docs/sphinx_docs.json ]; then
+            echo "creating new docs/sphinx_docs.json"
             echo "{}" > docs/sphinx_docs.json
           else
             mv sphinx-docs/sphinx_docs.json docs/sphinx_docs.json || true

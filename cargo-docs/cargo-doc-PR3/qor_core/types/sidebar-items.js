@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["StrConst","TypeId","bf16","f16"],"trait":["Coherent","Floating","Inf","Integral","Lockfree","One","Reloc","Scalar","TypeTag","Zero"]};

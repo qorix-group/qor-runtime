@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["component","config","core_errors","hash","id","json","prelude","types"],"struct":["Error","Version"],"type":["CoreResult","ErrorCode"]};

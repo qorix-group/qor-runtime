@@ -69,7 +69,9 @@ jobs:
 
           if [ ! -f cargo-docs/cargo_docs.json ]; then
             echo "creating new cargo-docs/cargo_docs.json"
-            echo "{}" > cargo-docs/cargo_docs.json
+            echo "{}" > docs/cargo_docs.json
+          else
+            mv cargo-docs/cargo_docs.json docs/cargo_docs.json
           fi
           echo "echo1"
           # Identify the folder name where docs are placed
@@ -77,7 +79,7 @@ jobs:
           echo "echo2"
           # Find all subfolders in the *current* doc directory matching "qor_*"
           # (Adjust the pattern or path as needed)
-          SUBFOLDERS=$(find "cargo-docs/$DOCS_FOLDER" -maxdepth 1 -type d -name "qor_*" -printf '%f\n')
+          SUBFOLDERS=$(find "docs/$DOCS_FOLDER" -maxdepth 1 -type d -name "qor_*" -printf '%f\n')
           echo "echo3"
           # Convert SUBFOLDERS (a newline-separated list) into a JSON array
           # e.g. ["qor_com", "qor_core", ...]
@@ -89,15 +91,15 @@ jobs:
           echo "echo4"
           jq --arg folder "$DOCS_FOLDER" --argjson subs "$SUBFOLDERS_JSON" \
             '. + {($folder): ( .[$folder] // [] | . + $subs | unique )}' cargo-docs/cargo_docs.json > tmp.json
-          mv tmp.json cargo-docs/cargo_docs.json
+          mv tmp.json docs/cargo_docs.json
 
           #debug purpose
-          cat cargo-docs/cargo_docs.json
+          cat docs/cargo_docs.json
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
-          folder: cargo-docs
+          folder: docs
           target-folder: cargo-docs
           clean: false

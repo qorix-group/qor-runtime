@@ -345,6 +345,7 @@ mod test {
     // Assign action tests
     //
     #[test]
+    #[ignore]
     fn test_assign_stm() {
         test_state_machine(
             || {

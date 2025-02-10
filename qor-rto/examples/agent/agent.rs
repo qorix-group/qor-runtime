@@ -14,7 +14,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub struct Agent{
+pub struct Agent {
     engine: Engine,
 }
 
@@ -22,11 +22,11 @@ impl Agent {
     //should take the task chain as input later
     pub fn new() -> Self {
         Self {
-            engine:Engine::default()
+            engine: Engine::default(),
         }
     }
 
-    pub fn init(&self,this: &Arc<Mutex<Activity>>){
+    pub fn init(&self, this: &Arc<Mutex<Activity>>) {
         self.engine.start().unwrap();
 
         let name = "Activity1a";
@@ -34,22 +34,19 @@ impl Agent {
         let init_event_ack = IpcEvent::new(&format!("{name}_init_ack"));
 
         let pgminit = Program::new().with_action(
-                Sequence::new()
+            Sequence::new()
                 .with_step(Sync::new(init_event.listener().unwrap()))
                 .with_step(Await::new_method_mut(this, Activity::init))
-                .with_step(Trigger::new(init_event_ack.notifier().unwrap()))
+                .with_step(Trigger::new(init_event_ack.notifier().unwrap())),
         );
 
         let handle = pgminit.spawn(&self.engine).unwrap();
 
         // Wait for the program to finish
         let _ = handle.join().unwrap();
-
-
     }
 
-    pub fn run(&self,this: &Arc<Mutex<Activity>>) {
-
+    pub fn run(&self, this: &Arc<Mutex<Activity>>) {
         println!("reach");
         let name = "Activity1a";
 
@@ -70,21 +67,19 @@ impl Agent {
 
         // Wait for the program to finish
         let _ = handle.join().unwrap();
-
     }
 
-    pub fn terminate(&self,this: &Arc<Mutex<Activity>>){
-
+    pub fn terminate(&self, this: &Arc<Mutex<Activity>>) {
         let name = "Activity1a";
         let term_event = IpcEvent::new(&format!("{name}_term"));
         let term_event_ack = IpcEvent::new(&format!("{name}_term_ack"));
 
         let pgminit = Program::new().with_action(
-                Sequence::new()
-                    //terminate
-                    .with_step(Sync::new(term_event.listener().unwrap()))
-                    .with_step(Await::new_method_mut(&this, Activity::terminate))
-                    .with_step(Trigger::new(term_event_ack.notifier().unwrap())),
+            Sequence::new()
+                //terminate
+                .with_step(Sync::new(term_event.listener().unwrap()))
+                .with_step(Await::new_method_mut(&this, Activity::terminate))
+                .with_step(Trigger::new(term_event_ack.notifier().unwrap())),
         );
 
         let handle = pgminit.spawn(&self.engine).unwrap();
@@ -94,6 +89,5 @@ impl Agent {
 
         // Engine shutdown
         self.engine.shutdown().unwrap();
-
     }
 }

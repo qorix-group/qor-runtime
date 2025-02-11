@@ -3,5 +3,10 @@
     "qor_core",
     "qor_os",
     "qor_rto"
+  ],
+  "cargo-doc-main": [
+    "qor_core",
+    "qor_os",
+    "qor_rto"
   ]
 }

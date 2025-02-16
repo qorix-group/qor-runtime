@@ -82,7 +82,7 @@ fn main() {
     let stop = SingleEvent::new();
 
     // our model with internal state
-    let model = Arc::new(Mutex::new(Model::new(1.0, 1.0))); // this is 'our' copy
+    let model: Arc<Mutex<Model>> = Arc::new(Mutex::new(Model::new(1.0, 1.0))); // this is 'our' copy
 
     // Create a new program with a timer, a model function and a termination event
     let program = Program::new().with_action(

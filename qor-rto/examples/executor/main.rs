@@ -16,10 +16,20 @@ pub mod executor;
 
 use executor::Executor;
 
-fn main() {
-let exec = Executor::new();
+use std::collections::HashMap;
 
-exec.init();
-exec.run();
-exec.terminate();
+fn main() {
+
+    let names = vec!["Activity1a","Activity1b","Activity2a","Activity2b"];
+
+    let dependency_graph: HashMap<&str, Vec<&str>> = HashMap::from([
+        ("Activity1a", vec![]),
+         ("Activity1a", vec!["Activity1b"]),     // B depends on A
+         ("Activity1b", vec!["Activity2a","Activity2b"]),     // C depends on A
+        // ("Activity3b", vec!["Activity2b"]),        // A has no dependencies
+    ]);
+
+    let exec = Executor::new(&names);
+
+    exec.run(&dependency_graph);
 }

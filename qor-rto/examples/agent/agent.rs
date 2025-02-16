@@ -7,93 +7,136 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::activity::Activity;
+use crate::activity::Activity1a;
 
 use qor_rto::prelude::*;
 use std::{
     sync::{Arc, Mutex, RwLock},
     time::{Duration, Instant},
 };
+use std::collections::HashMap;
 
-pub struct Agent{
-    engine: Engine,
+fn generate_ipc_events(activities: &Vec<Arc<Mutex<Activity1a>>>) -> HashMap<String, HashMap<String, Event<IpcEvent>>> {
+    let mut events_map: HashMap<String, HashMap<String, Event<IpcEvent>>> = HashMap::new();
+
+    for activity in activities.iter() {
+        let mut event_submap: HashMap<String, Event<IpcEvent>>= HashMap::new();
+
+        event_submap.insert("init".to_string(), IpcEvent::new(&format!("{}_init", activity.lock().unwrap().getname())));
+        event_submap.insert("init_ack".to_string(), IpcEvent::new(&format!("{}_init_ack", activity.lock().unwrap().getname())));
+        event_submap.insert("step".to_string(), IpcEvent::new(&format!("{}_step", activity.lock().unwrap().getname())));
+        event_submap.insert("step_ack".to_string(), IpcEvent::new(&format!("{}_step_ack", activity.lock().unwrap().getname())));
+        event_submap.insert("term".to_string(), IpcEvent::new(&format!("{}_term", activity.lock().unwrap().getname())));
+        event_submap.insert("term_ack".to_string(), IpcEvent::new(&format!("{}_term_ack", activity.lock().unwrap().getname())));
+
+        events_map.insert(activity.lock().unwrap().getname(), event_submap);
+    }
+
+    events_map
 }
 
-impl Agent {
+
+
+pub struct Agent<'a>{
+    engine: Engine,
+    ipc_events:HashMap<String, HashMap<String, Event<IpcEvent>>>,
+    activities: &'a Vec<Arc<Mutex<Activity1a>>>
+}
+
+impl<'a> Agent<'a> {
     //should take the task chain as input later
-    pub fn new() -> Self {
+    pub fn new(this: &'a Vec<Arc<Mutex<Activity1a>>>) -> Self {
         Self {
-            engine:Engine::default()
+            engine: Engine::default(),
+            ipc_events:generate_ipc_events(&this),
+            activities: this
         }
     }
 
-    pub fn init(&self,this: &Arc<Mutex<Activity>>){
+    fn init(&self)-> Box<dyn Action>{
+
+        let mut top_sequence = Sequence::new();
+        
+         for activity in self.activities.iter() {
+            let name= &activity.lock().unwrap().getname();
+            let sub_sequence =         Sequence::new()
+            .with_step(Sync::new(self.ipc_events.get(name).unwrap().get("init").unwrap().listener().unwrap()))
+            .with_step(Await::new_method_mut(activity, Activity::init))
+            .with_step(Trigger::new(self.ipc_events.get(name).unwrap().get("init_ack").unwrap().notifier().unwrap()));
+
+            top_sequence= top_sequence.with_step(sub_sequence);
+     
+         }
+
+         top_sequence
+    }
+
+    fn step(&self)-> Box<dyn Action>{
+
+        let mut top_sequence = Concurrency::new();
+        
+         for activity in self.activities {
+            let name= &activity.lock().unwrap().getname();
+            let sub_sequence =         Sequence::new()
+            .with_step(Sync::new(self.ipc_events.get(name).unwrap().get("step").unwrap().listener().unwrap()))
+            .with_step(Await::new_method_mut(activity, Activity::step))
+            .with_step(Trigger::new(self.ipc_events.get(name).unwrap().get("step_ack").unwrap().notifier().unwrap()));
+
+
+            top_sequence= top_sequence.with_branch(sub_sequence);
+        
+         }
+    
+         top_sequence
+    }
+
+    fn terminate(&self)-> Box<dyn Action>{
+
+        let mut top_sequence = Sequence::new();
+        
+         for activity in self.activities.iter() {
+            let name= &activity.lock().unwrap().getname();
+            let sub_sequence =         Sequence::new()
+            .with_step(Sync::new(self.ipc_events.get(name).unwrap().get("term").unwrap().listener().unwrap()))
+            .with_step(Await::new_method_mut(&activity.clone(), Activity::terminate))
+            .with_step(Trigger::new(self.ipc_events.get(name).unwrap().get("term_ack").unwrap().notifier().unwrap()));
+
+
+            top_sequence= top_sequence.with_step(sub_sequence);
+        
+         }
+    
+         top_sequence
+    }
+
+
+    pub fn run(&self){
         self.engine.start().unwrap();
-
-        let name = "Activity1a";
-        let init_event = IpcEvent::new(&format!("{name}_init"));
-        let init_event_ack = IpcEvent::new(&format!("{name}_init_ack"));
-
-        let pgminit = Program::new().with_action(
-                Sequence::new()
-                .with_step(Sync::new(init_event.listener().unwrap()))
-                .with_step(Await::new_method_mut(this, Activity::init))
-                .with_step(Trigger::new(init_event_ack.notifier().unwrap()))
-        );
-
-        let handle = pgminit.spawn(&self.engine).unwrap();
-
-        // Wait for the program to finish
-        let _ = handle.join().unwrap();
-
-
-    }
-
-    pub fn run(&self,this: &Arc<Mutex<Activity>>) {
-
         println!("reach");
-        let name = "Activity1a";
-
-        let step_event = IpcEvent::new(&format!("{name}_step"));
-        let step_event_ack = IpcEvent::new(&format!("{name}_step_ack"));
 
         let pgminit = Program::new().with_action(
-            ForRange::new(10).with_body(
-                Sequence::new()
-                    //step
-                    .with_step(Sync::new(step_event.listener().unwrap()))
-                    .with_step(Await::new_method_mut(&this, Activity::step))
-                    .with_step(Trigger::new(step_event_ack.notifier().unwrap())),
-            ),
+                 Sequence::new()
+                     //step
+                     .with_step(
+                            self.init(),
+                )
+                 .with_step(
+                     ForRange::new(10).with_body(
+                        self.step(),
+                     )
+                 )
+                 .with_step(
+                    self.terminate(),
+                 ),
         );
 
+        
         let handle = pgminit.spawn(&self.engine).unwrap();
 
-        // Wait for the program to finish
+                // Wait for the program to finish
         let _ = handle.join().unwrap();
 
     }
 
-    pub fn terminate(&self,this: &Arc<Mutex<Activity>>){
 
-        let name = "Activity1a";
-        let term_event = IpcEvent::new(&format!("{name}_term"));
-        let term_event_ack = IpcEvent::new(&format!("{name}_term_ack"));
-
-        let pgminit = Program::new().with_action(
-                Sequence::new()
-                    //terminate
-                    .with_step(Sync::new(term_event.listener().unwrap()))
-                    .with_step(Await::new_method_mut(&this, Activity::terminate))
-                    .with_step(Trigger::new(term_event_ack.notifier().unwrap())),
-        );
-
-        let handle = pgminit.spawn(&self.engine).unwrap();
-
-        // Wait for the program to finish
-        let _ = handle.join().unwrap();
-
-        // Engine shutdown
-        self.engine.shutdown().unwrap();
-
-    }
 }

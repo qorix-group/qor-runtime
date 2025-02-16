@@ -10,18 +10,27 @@ use qor_rto::prelude::*;
 use std::{
     sync::{Arc, Mutex},
     time::Duration,
+    vec
 };
 
 pub mod activity;
 pub mod agent;
 
-use activity::Activity;
+use crate::activity::Activity;
+use crate::activity::Activity1a;
 use agent::Agent;
 
 fn main() {
-    let act = Arc::new(Mutex::new(Activity::new("activity1a")));
-    let agent=Agent::new();
-    agent.init(&act);
-    agent.run(&act);
-    agent.terminate(&act);
+    let act:Arc<Mutex<Activity1a>> = Arc::new(Mutex::new(Activity1a::new("Activity1a".to_string())));
+    let acta:Arc<Mutex<Activity1a>> = Arc::new(Mutex::new(Activity1a::new("Activity1b".to_string())));
+    let actb:Arc<Mutex<Activity1a>> = Arc::new(Mutex::new(Activity1a::new("Activity2a".to_string())));
+    let actc:Arc<Mutex<Activity1a>> = Arc::new(Mutex::new(Activity1a::new("Activity2b".to_string())));
+    let activities = vec![act,acta,actb,actc];
+    
+    let agent = Agent::new(&activities);
+    // agent.init();
+    // agent.run();
+    // agent.terminate();
+
+    agent.run();
 }

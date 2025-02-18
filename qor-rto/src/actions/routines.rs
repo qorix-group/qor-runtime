@@ -294,6 +294,20 @@ impl Await {
             async move { routine(&mut this_clone.lock().unwrap()) }
         })
     }
+
+    pub fn new_method_mut_u<T, F>(this: &Arc<Mutex<T>>, routine: F) -> Box<Self>
+    where
+        T: Send + 'static + ?Sized,
+        F: Fn(&mut T) -> RoutineResult + Send + core::marker::Sync + 'static,
+    {
+        let this_clone = this.clone();
+        let routine = Arc::new(routine);
+        Self::new_fn(move || {
+            let this_clone = this_clone.clone();
+            let routine = routine.clone();
+            async move { routine(&mut this_clone.lock().unwrap()) }
+        })
+    }
 }
 
 impl Debug for Await {

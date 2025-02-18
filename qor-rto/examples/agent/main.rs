@@ -18,13 +18,16 @@ pub mod agent;
 
 use crate::activity::Activity;
 use crate::activity::Activity1a;
+use crate::activity::Activity1b;
+use crate::activity::Activity1c;
+
 use agent::Agent;
 
 fn main() {
-    let act:Arc<Mutex<Activity1a>> = Arc::new(Mutex::new(Activity1a::new("Activity1a".to_string())));
-    let acta:Arc<Mutex<Activity1a>> = Arc::new(Mutex::new(Activity1a::new("Activity1b".to_string())));
-    let actb:Arc<Mutex<Activity1a>> = Arc::new(Mutex::new(Activity1a::new("Activity2a".to_string())));
-    let actc:Arc<Mutex<Activity1a>> = Arc::new(Mutex::new(Activity1a::new("Activity2b".to_string())));
+    let act:Arc<Mutex<dyn Activity>> = Arc::new(Mutex::new(Activity1a::new("Activity1a".to_string())));
+    let acta:Arc<Mutex<dyn Activity>> = Arc::new(Mutex::new(Activity1b::new("Activity1b".to_string())));
+    let actb:Arc<Mutex<dyn Activity>> = Arc::new(Mutex::new(Activity1c::new("Activity2a".to_string())));
+    let actc:Arc<Mutex<dyn Activity>> = Arc::new(Mutex::new(Activity1a::new("Activity2b".to_string())));
     let activities = vec![act,acta,actb,actc];
     
     let agent = Agent::new(&activities);

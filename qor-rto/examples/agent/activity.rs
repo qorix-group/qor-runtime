@@ -55,6 +55,13 @@ pub struct Activity1b {
     name: String,
 }
 
+impl Activity1b{
+    pub fn new(named:String)->Activity1b{
+        Self{name:named}
+    }
+
+}
+
 impl Activity for Activity1b {
     fn init(&mut self) -> RoutineResult {
         println!("{}: Initializing...", self.name);
@@ -78,6 +85,13 @@ impl Activity for Activity1b {
 // Example Activity 1C
 pub struct Activity1c {
     name: String,
+}
+
+impl Activity1c{
+    pub fn new(named:String)->Activity1c{
+        Self{name:named}
+    }
+
 }
 
 impl Activity for Activity1c {

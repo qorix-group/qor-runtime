@@ -25,8 +25,7 @@ fn main() {
     let dependency_graph: HashMap<&str, Vec<&str>> = HashMap::from([
         ("Activity1a", vec![]),
          ("Activity1a", vec!["Activity1b"]),     // B depends on A
-         ("Activity1b", vec!["Activity2a","Activity2b"]),     // C depends on A
-        // ("Activity3b", vec!["Activity2b"]),        // A has no dependencies
+         ("Activity1b", vec!["Activity2a","Activity2b"]),     // 2a,b depends on b
     ]);
 
     let exec = Executor::new(&names);

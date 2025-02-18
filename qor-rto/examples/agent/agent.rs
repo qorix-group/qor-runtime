@@ -7,7 +7,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::activity::Activity;
-use crate::activity::Activity1a;
 
 use qor_rto::prelude::*;
 use std::{
@@ -16,7 +15,7 @@ use std::{
 };
 use std::collections::HashMap;
 
-fn generate_ipc_events(activities: &Vec<Arc<Mutex<Activity1a>>>) -> HashMap<String, HashMap<String, Event<IpcEvent>>> {
+fn generate_ipc_events(activities: &Vec<Arc<Mutex<dyn Activity>>>) -> HashMap<String, HashMap<String, Event<IpcEvent>>> {
     let mut events_map: HashMap<String, HashMap<String, Event<IpcEvent>>> = HashMap::new();
 
     for activity in activities.iter() {
@@ -40,15 +39,15 @@ fn generate_ipc_events(activities: &Vec<Arc<Mutex<Activity1a>>>) -> HashMap<Stri
 pub struct Agent<'a>{
     engine: Engine,
     ipc_events:HashMap<String, HashMap<String, Event<IpcEvent>>>,
-    activities: &'a Vec<Arc<Mutex<Activity1a>>>
+    activities: &'a Vec<Arc<Mutex<dyn Activity>>>
 }
 
 impl<'a> Agent<'a> {
     //should take the task chain as input later
-    pub fn new(this: &'a Vec<Arc<Mutex<Activity1a>>>) -> Self {
+    pub fn new(this: &'a Vec<Arc<Mutex<dyn Activity>>>) -> Self {
         Self {
             engine: Engine::default(),
-            ipc_events:generate_ipc_events(&this),
+            ipc_events:generate_ipc_events(this),
             activities: this
         }
     }
@@ -61,7 +60,7 @@ impl<'a> Agent<'a> {
             let name= &activity.lock().unwrap().getname();
             let sub_sequence =         Sequence::new()
             .with_step(Sync::new(self.ipc_events.get(name).unwrap().get("init").unwrap().listener().unwrap()))
-            .with_step(Await::new_method_mut(activity, Activity::init))
+            .with_step(Await::new_method_mut_u(activity, Activity::init))
             .with_step(Trigger::new(self.ipc_events.get(name).unwrap().get("init_ack").unwrap().notifier().unwrap()));
 
             top_sequence= top_sequence.with_step(sub_sequence);
@@ -79,7 +78,7 @@ impl<'a> Agent<'a> {
             let name= &activity.lock().unwrap().getname();
             let sub_sequence =         Sequence::new()
             .with_step(Sync::new(self.ipc_events.get(name).unwrap().get("step").unwrap().listener().unwrap()))
-            .with_step(Await::new_method_mut(activity, Activity::step))
+            .with_step(Await::new_method_mut_u(activity, Activity::step))
             .with_step(Trigger::new(self.ipc_events.get(name).unwrap().get("step_ack").unwrap().notifier().unwrap()));
 
 
@@ -98,7 +97,7 @@ impl<'a> Agent<'a> {
             let name= &activity.lock().unwrap().getname();
             let sub_sequence =         Sequence::new()
             .with_step(Sync::new(self.ipc_events.get(name).unwrap().get("term").unwrap().listener().unwrap()))
-            .with_step(Await::new_method_mut(&activity.clone(), Activity::terminate))
+            .with_step(Await::new_method_mut_u(&activity.clone(), Activity::terminate))
             .with_step(Trigger::new(self.ipc_events.get(name).unwrap().get("term_ack").unwrap().notifier().unwrap()));
 
 

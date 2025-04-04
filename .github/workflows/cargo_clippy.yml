@@ -1,0 +1,28 @@
+name: cargo clippy check
+
+on:
+  pull_request:
+    branches: [main, development]
+    types: [opened, ready_for_review, reopened, synchronize]
+
+jobs:
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: clippy
+
+      - name: check clippy errors (without warnings)
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -D warnings

@@ -1,0 +1,83 @@
+name: cargo test and tarpaulin coverage report
+
+on:
+  push:
+    branches: [ main, development ]
+  pull_request:
+    branches: [ main, development ]
+    types: [opened, ready_for_review, reopened, synchronize]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+
+      - name: Run tests
+        run: cargo test --verbose
+
+  cache-tarpaulin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Cache cargo-tarpaulin binary
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/bin/cargo-tarpaulin
+          key: ${{ runner.os }}-tarpaulin-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-tarpaulin-
+
+      - name: Install cargo-tarpaulin if not already installed
+        run: |
+          if ! command -v cargo-tarpaulin > /dev/null; then
+            cargo install cargo-tarpaulin
+          else
+            echo "cargo-tarpaulin is already installed"
+          fi
+
+      - name: Upload cargo-tarpaulin binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cargo-tarpaulin
+          path: ~/.cargo/bin/cargo-tarpaulin
+
+  code-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: cache-tarpaulin
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+
+      - name: Download cargo-tarpaulin binary
+        uses: actions/download-artifact@v4
+        with:
+          name: cargo-tarpaulin
+          path: ~/.cargo/bin/
+
+      - name: Ensure cargo-tarpaulin is executable
+        run: chmod +x ~/.cargo/bin/cargo-tarpaulin
+
+      - name: Generate code coverage report
+        run: cargo tarpaulin --out Html
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: ./tarpaulin-report.html

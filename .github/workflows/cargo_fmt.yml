@@ -1,0 +1,25 @@
+name: cargo fmt (rustfmt) check
+
+on:
+  pull_request:
+    branches: [ main, development ]
+    types: [opened, ready_for_review, reopened, synchronize]
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: rustfmt
+
+      - name: check code format (rustfmt)
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: -- --check

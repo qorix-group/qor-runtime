@@ -1,0 +1,106 @@
+name: Deploy Rust Documentation to GitHub Pages
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  push:
+    branches:
+      - main
+        development
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+
+      - name: Build Documentation
+        run: |
+          cargo doc --no-deps --all-features
+
+      - name: Upload documentation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cargo-docs
+          path: target/doc/
+
+  deploy-docs:
+    name: Deploy Rust Docs to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download Documentation Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: cargo-docs
+          path: artifact
+
+      - name: Prepare Documentation Directory
+        run: |
+          # Set the subdirectory name based on the event type.
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            DOCS_FOLDER="cargo-doc-PR${{ github.event.pull_request.number }}"
+          else
+            DOCS_FOLDER="cargo-doc-main"
+          fi
+          echo "Deploying documentation to subdirectory: ${DOCS_FOLDER}"
+
+          # Remove any existing docs for this PR/main branch and create the new folder.
+          rm -rf docs/"${DOCS_FOLDER}"
+          mkdir -p docs/"${DOCS_FOLDER}"
+          mv artifact/* docs/"${DOCS_FOLDER}"/
+          echo "DOCS_FOLDER=${DOCS_FOLDER}" >> $GITHUB_ENV
+
+      - name: Update versions cargo_docs.json
+        run: |
+          # Fetch the existing cargo_docs.json from gh-pages (if it exists)
+          git fetch origin gh-pages --depth 1
+          git checkout origin/gh-pages -- cargo-docs/cargo_docs.json || true
+
+          if [ ! -f cargo-docs/cargo_docs.json ]; then
+            echo "creating new docs/cargo_docs.json"
+            echo "{}" > docs/cargo_docs.json
+          else
+            mv cargo-docs/cargo_docs.json docs/cargo_docs.json
+          fi
+
+          # Identify the folder name where docs are placed
+          DOCS_FOLDER="${{ env.DOCS_FOLDER }}"
+
+          # Find all subfolders in the *current* doc directory matching "qor_*"
+          # (Adjust the pattern or path as needed)
+          SUBFOLDERS=$(find "docs/$DOCS_FOLDER" -maxdepth 1 -type d -name "qor_*" -printf '%f\n')
+
+          # Convert SUBFOLDERS (a newline-separated list) into a JSON array
+          # e.g. ["qor_com", "qor_core", ...]
+          if [ -n "$SUBFOLDERS" ]; then
+            SUBFOLDERS_JSON=$(printf '%s\n' "$SUBFOLDERS" | jq -R . | jq -s .)
+          else
+            SUBFOLDERS_JSON="[]"
+          fi
+
+          jq --arg folder "$DOCS_FOLDER" --argjson subs "$SUBFOLDERS_JSON" \
+            '. + {($folder): ( .[$folder] // [] | . + $subs | unique )}' docs/cargo_docs.json > tmp.json
+          mv tmp.json docs/cargo_docs.json
+
+          #debug purpose
+          cat docs/cargo_docs.json
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: docs
+          target-folder: cargo-docs
+          clean: false

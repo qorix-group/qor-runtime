@@ -1,0 +1,8 @@
+[package]
+name = "integration_tests"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+async_runtime = { path = "../async_runtime" }
+orchestration = { path = "../orchestration" }

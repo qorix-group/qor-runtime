@@ -1,0 +1,41 @@
+name: Miri checker
+#Run Miri to check for undefined behavior in Rust code.
+
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+    branches: [main, development]
+    types: [opened, ready_for_review, reopened, synchronize]
+
+jobs:
+  miri:
+    name: "Run Miri - the undefined behavior detector"
+    # don't run it for draft PRs
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+
+      - name: Install Miri
+        run: |
+          rustup toolchain install nightly --component miri
+          rustup override set nightly
+          cargo miri setup
+
+      - name: Run Miri and Save Report
+        run: |
+          set -o pipefail
+          # The test 'test_mt_one_pop_one_stealer' takes about 25 minutes to run, so it is skipped for now.
+          cargo miri test --workspace -- --skip test_mt_one_pop_one_stealer --skip test_mt_one_push_mpmc_one_stealer --skip test_one_producer_multi_stealer_mt_thread --skip test_one_producer_one_stealer_mt_thread 2>&1 | tee miri_report.txt
+
+      - name: Upload Miri Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: miri-report
+          path: miri_report.txt

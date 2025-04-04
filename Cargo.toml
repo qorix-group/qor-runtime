@@ -1,0 +1,9 @@
+[workspace]
+resolver = "2"
+members=[
+    "foundation",
+    "async_runtime", 
+    "integration_tests",
+    "orchestration",
+    "logging_tracing"
+]

@@ -1,0 +1,23 @@
+name: cargo build check
+
+on:
+  push:
+    branches: [ main, development ]
+  pull_request:
+    branches: [ main, development ]
+    types: [opened, ready_for_review, reopened, synchronize]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install protoc
+      uses: arduino/setup-protoc@v3
+
+    - name: cargo build
+      run: cargo build --verbose

@@ -1362,12 +1362,12 @@ dependencies = [
 [[package]]
 name = "tracing-perfetto-sdk-layer"
 version = "0.12.0"
-source = "git+https://github.com/qorix-group/tracing-perfetto-sdk.git?branch=qor_adaptations#62759e172c1cdec2ad8fad18a568a6b994316b35"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20553a1a2a62b10b5df9439dbda832bd396f12f5f3262421e3af9ec36af4a10d"
 dependencies = [
  "bytes",
  "cxx",
  "dashmap",
- "libc",
  "nix",
  "prost",
  "thiserror 2.0.12",
@@ -1382,7 +1382,8 @@ dependencies = [
 [[package]]
 name = "tracing-perfetto-sdk-schema"
 version = "0.12.0"
-source = "git+https://github.com/qorix-group/tracing-perfetto-sdk.git?branch=qor_adaptations#62759e172c1cdec2ad8fad18a568a6b994316b35"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dfac01ba9f65b13334fcda7a138c5c001737f8f5752d0ec143e693abec622632"
 dependencies = [
  "anyhow",
  "prost",
@@ -1393,7 +1394,8 @@ dependencies = [
 [[package]]
 name = "tracing-perfetto-sdk-sys"
 version = "0.12.0"
-source = "git+https://github.com/qorix-group/tracing-perfetto-sdk.git?branch=qor_adaptations#62759e172c1cdec2ad8fad18a568a6b994316b35"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "411e9d0454e66404b728263c102d4ed93262a06019f85bb7857963868e8ff018"
 dependencies = [
  "anyhow",
  "bytes",

@@ -1,18 +1,18 @@
 [package]
 name = "foundation"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
-iceoryx2-bb-container = "0.5.0"
-iceoryx2-bb-derive-macros = "0.5.0"
-iceoryx2-bb-elementary = "0.5.0"
-iceoryx2-bb-lock-free = "0.5.0"
-iceoryx2-bb-memory = "0.5.0"
-iceoryx2-bb-posix = "0.5.0"
-iceoryx2-bb-system-types = "0.5.0"
-iceoryx2-bb-testing = "0.5.0"
-iceoryx2-bb-threadsafe = "0.5.0"
-iceoryx2-pal-concurrency-sync = "0.5.0"
-tracing = "0.1.41"
-tracing-subscriber = "0.3.19"
+iceoryx2-bb-container.workspace = true
+iceoryx2-bb-derive-macros.workspace = true
+iceoryx2-bb-elementary.workspace = true
+iceoryx2-bb-lock-free.workspace = true
+iceoryx2-bb-memory.workspace = true
+iceoryx2-bb-posix.workspace = true
+iceoryx2-bb-system-types.workspace = true
+iceoryx2-bb-testing.workspace = true
+iceoryx2-bb-threadsafe.workspace = true
+iceoryx2-pal-concurrency-sync.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

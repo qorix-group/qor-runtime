@@ -1,13 +1,13 @@
 [package]
 name = "orchestration"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
-async_runtime = { path = "../async_runtime" }
-foundation = { path = "../foundation" }
-logging_tracing = { path = "../logging_tracing" }
-iceoryx2 = "0.5.0"
-tracing = "0.1.41"
-tracing-subscriber = "0.3.19"
-libc = "0.2.171"
+async_runtime.workspace = true
+foundation.workspace = true
+iceoryx2.workspace = true
+libc.workspace = true
+logging_tracing.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

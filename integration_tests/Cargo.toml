@@ -1,8 +1,8 @@
 [package]
 name = "integration_tests"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
-async_runtime = { path = "../async_runtime" }
-orchestration = { path = "../orchestration" }
+async_runtime.workspace = true
+orchestration.workspace = true

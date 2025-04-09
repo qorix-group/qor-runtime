@@ -7,3 +7,39 @@ members=[
     "orchestration",
     "logging_tracing"
 ]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+
+[workspace.dependencies]
+async_runtime.path = "async_runtime"
+foundation.path = "foundation"
+logging_tracing.path = "logging_tracing"
+orchestration.path = "orchestration"
+
+bytes = "1.9.0"
+iceoryx2 = "0.5.0"
+iceoryx2-bb-container = "0.5.0"
+iceoryx2-bb-derive-macros = "0.5.0"
+iceoryx2-bb-elementary = "0.5.0"
+iceoryx2-bb-lock-free = "0.5.0"
+iceoryx2-bb-memory = "0.5.0"
+iceoryx2-bb-posix = "0.5.0"
+iceoryx2-bb-system-types = "0.5.0"
+iceoryx2-bb-testing = "0.5.0"
+iceoryx2-bb-threadsafe = "0.5.0"
+iceoryx2-pal-concurrency-sync = "0.5.0"
+libc = "0.2.171"
+tracing = "0.1.41"
+tracing-appender = "0.2.3"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+tracing-perfetto-sdk-layer = "0.12.0"
+tracing-perfetto-sdk-schema = "0.12.0"
+tracing-perfetto-sdk-sys = "0.12.0"
+
+# TODO: Pin the revision id to make builds reproducible
+[patch.crates-io]
+tracing-perfetto-sdk-layer = { git = "https://github.com/qorix-group/tracing-perfetto-sdk.git", branch = "bazel_build" }
+tracing-perfetto-sdk-schema = { git = "https://github.com/qorix-group/tracing-perfetto-sdk.git", branch = "bazel_build" }
+tracing-perfetto-sdk-sys = { git = "https://github.com/qorix-group/tracing-perfetto-sdk.git", branch = "bazel_build" }

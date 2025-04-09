@@ -1,1 +1,3 @@
-# TBD
+exports_files([
+    "MODULE.bazel",
+])

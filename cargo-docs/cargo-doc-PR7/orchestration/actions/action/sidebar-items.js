@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["ActionBaseMeta","ActionRuntimeInfo","ActionRuntimeInfoProvider","NamedId"],"trait":["ActionTrait"],"type":["ActionFuture","ActionResult"]};

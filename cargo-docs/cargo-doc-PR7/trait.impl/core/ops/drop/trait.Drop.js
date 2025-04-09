@@ -1,0 +1,9 @@
+(function() {
+    var implementors = Object.fromEntries([["foundation",[["impl&lt;'a, T: <a class=\"trait\" href=\"https://doc.rust-lang.org/1.86.0/core/marker/trait.Send.html\" title=\"trait core::marker::Send\">Send</a>&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/1.86.0/core/ops/drop/trait.Drop.html\" title=\"trait core::ops::drop::Drop\">Drop</a> for <a class=\"struct\" href=\"foundation/containers/spmc_queue/struct.LocalProducerConsumer.html\" title=\"struct foundation::containers::spmc_queue::LocalProducerConsumer\">LocalProducerConsumer</a>&lt;'_, T&gt;"],["impl&lt;T: <a class=\"trait\" href=\"https://doc.rust-lang.org/1.86.0/core/marker/trait.Send.html\" title=\"trait core::marker::Send\">Send</a>&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/1.86.0/core/ops/drop/trait.Drop.html\" title=\"trait core::ops::drop::Drop\">Drop</a> for <a class=\"struct\" href=\"foundation/containers/spmc_queue/struct.BoundProducerConsumer.html\" title=\"struct foundation::containers::spmc_queue::BoundProducerConsumer\">BoundProducerConsumer</a>&lt;T&gt;"]]],["orchestration",[["impl&lt;T&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/1.86.0/core/ops/drop/trait.Drop.html\" title=\"trait core::ops::drop::Drop\">Drop</a> for <a class=\"struct\" href=\"orchestration/core/runtime_seq_acc/struct.RuntimeSequentialAccessGuard.html\" title=\"struct orchestration::core::runtime_seq_acc::RuntimeSequentialAccessGuard\">RuntimeSequentialAccessGuard</a>&lt;'_, T&gt;"]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":57,"fragment_lengths":[1024,415]}

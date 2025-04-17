@@ -55,15 +55,16 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 Run the example
 
+### Using Cargo
 ```bash
-cargo run --example hello_world
+cargo run --example basic
 ```
 
-### Bazel build
-Run the example
+### Using Bazel
 ```bash
-bazel run //orchestration:basic --spawn_strategy=local
+bazel run //orchestration:basic
 ```
+
 ### Devenv method for Nix environments
 
 [Devenv](https://devenv.sh/) is a tool that provides a fast, declarative,

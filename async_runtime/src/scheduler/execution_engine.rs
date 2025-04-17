@@ -7,7 +7,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use super::scheduler::*;
@@ -112,6 +112,7 @@ impl ExecutionEngineBuilder {
         let sched = Arc::new(Scheduler {
             worker_access: unsafe { worker_interactors.assume_init() },
             num_of_searching_workers: IoxAtomicU8::new(0),
+            parked_workers_indexes: Mutex::new(vec![]),
             global_queue,
         });
 

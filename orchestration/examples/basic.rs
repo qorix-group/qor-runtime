@@ -9,7 +9,7 @@
 
 use std::{thread, time::Duration};
 
-use async_runtime::{core::types::box_future, runtime::runtime::AsyncRuntimeBuilder, scheduler::execution_engine::*};
+use async_runtime::{core::types::box_future, futures::yield_now, runtime::runtime::AsyncRuntimeBuilder, scheduler::execution_engine::*};
 use foundation::prelude::*;
 use logging_tracing::{TraceScope, TracingLibraryBuilder};
 use orchestration::{
@@ -103,10 +103,46 @@ async fn wait_ends3() -> ActionResult {
     Ok(())
 }
 
+async fn test1_func() -> ActionResult {
+    info!("Start of 'test1' function.");
+    info!("'test1' function yielding....");
+    // yield for other tasks to run.
+    yield_now::yield_now().await;
+    info!("'test1' function resuming....");
+    let rv = busy_sleep();
+    info!("End of 'test1' function.");
+    return rv;
+}
+
+async fn test2_func() -> ActionResult {
+    info!("Start of 'test2' function.");
+    let rv = busy_sleep();
+    info!("End of 'test2' function.");
+    return rv;
+}
+
+async fn test3_func() -> ActionResult {
+    info!("Start of 'test3' function.");
+    info!("'test3' function yielding....");
+    // yield for other tasks to run.
+    yield_now::yield_now().await;
+    info!("'test3' function resuming....");
+    let rv = busy_sleep();
+    info!("End of 'test3' function.");
+    return rv;
+}
+
+async fn test4_func() -> ActionResult {
+    info!("Start of 'test4' function.");
+    let rv = busy_sleep();
+    info!("End of 'test4' function.");
+    return rv;
+}
+
 // playground for testing
 fn main() {
     let mut logger = TracingLibraryBuilder::new()
-        .global_log_level(Level::INFO)
+        .global_log_level(Level::DEBUG)
         .enable_tracing(TraceScope::AppScope)
         .enable_logging(true)
         .build();
@@ -114,7 +150,7 @@ fn main() {
     logger.init_log_trace();
 
     let mut runtime = AsyncRuntimeBuilder::new()
-        .with_engine(ExecutionEngineBuilder::new().task_queue_size(256).workers(3))
+        .with_engine(ExecutionEngineBuilder::new().task_queue_size(256).workers(2))
         .build()
         .unwrap();
 
@@ -131,33 +167,43 @@ fn main() {
         let event_name3: &str = "Test_Event_3";
         let mut program = ProgramBuilder::new("basic")
             .with_body(
-                Concurrency::new_with_id(NamedId::new_static("some_tracking_string"))
-                    .with_branch(SomeAction::new())
-                    .with_branch(
-                        Sequence::new()
-                            .with_step(SomeAction::new())
-                            .with_step(Concurrency::new().with_branch(SomeAction::new()))
-                            .with_step(SomeAction::new()),
+                Sequence::new_with_id(NamedId::new_static("sequence1"))
+                    .with_step(
+                        Concurrency::new_with_id(NamedId::new_static("concurrency1 in sequence1"))
+                            .with_branch(Invoke::from_async(test1_func))
+                            .with_branch(Invoke::from_async(test2_func))
+                            .with_branch(Invoke::from_async(test3_func))
+                            .with_branch(Invoke::from_async(test4_func)),
                     )
-                    .with_branch(SomeAction::new())
-                    .with_branch(Invoke::from_async(testasync))
-                    .with_branch(Sequence::new().with_step(Sync::new(event_name)).with_step(Invoke::from_async(wait_ends)))
-                    .with_branch(Sequence::new().with_step(Invoke::from_fn(busy_sleep)).with_step(Trigger::new(event_name)))
-                    .with_branch(
-                        Sequence::new()
-                            .with_step(Sync::new(event_name2))
-                            .with_step(Invoke::from_async(wait_ends2)),
-                    )
-                    .with_branch(Sequence::new().with_step(Invoke::from_async(wait_ends3)))
-                    .with_branch(
-                        Sequence::new()
-                            // .with_step(Invoke::from_fn(busy_sleep))
-                            .with_step(Trigger::new(event_name3)),
-                    )
-                    .with_branch(
-                        Sequence::new()
-                            .with_step(Invoke::from_fn(busy_sleep))
-                            .with_step(Trigger::new(event_name2)),
+                    .with_step(
+                        Concurrency::new_with_id(NamedId::new_static("some_tracking_string"))
+                            .with_branch(SomeAction::new())
+                            .with_branch(
+                                Sequence::new()
+                                    .with_step(SomeAction::new())
+                                    .with_step(Concurrency::new().with_branch(SomeAction::new()))
+                                    .with_step(SomeAction::new()),
+                            )
+                            .with_branch(SomeAction::new())
+                            .with_branch(Invoke::from_async(testasync))
+                            .with_branch(Sequence::new().with_step(Sync::new(event_name)).with_step(Invoke::from_async(wait_ends)))
+                            .with_branch(Sequence::new().with_step(Invoke::from_fn(busy_sleep)).with_step(Trigger::new(event_name)))
+                            .with_branch(
+                                Sequence::new()
+                                    .with_step(Sync::new(event_name2))
+                                    .with_step(Invoke::from_async(wait_ends2)),
+                            )
+                            .with_branch(Sequence::new().with_step(Invoke::from_async(wait_ends3)))
+                            .with_branch(
+                                Sequence::new()
+                                    // .with_step(Invoke::from_fn(busy_sleep))
+                                    .with_step(Trigger::new(event_name3)),
+                            )
+                            .with_branch(
+                                Sequence::new()
+                                    .with_step(Invoke::from_fn(busy_sleep))
+                                    .with_step(Trigger::new(event_name2)),
+                            ),
                     ),
             )
             .with_cycle_time(Duration::from_millis(1000))

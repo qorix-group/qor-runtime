@@ -125,7 +125,11 @@ impl WorkerInner {
         // Setup context
         ctx_initialize(builder);
 
-        self.own_interactor.state.transition_to_executing();
+        self.local_state = LocalState::Executing;
+        self.own_interactor
+            .state
+            .0
+            .store(WORKER_STATE_EXECUTING, std::sync::atomic::Ordering::SeqCst);
     }
 
     fn run(&mut self) {
@@ -133,46 +137,104 @@ impl WorkerInner {
             let (task_opt, should_notify) = self.try_pick_work();
 
             if let Some(task) = task_opt {
-                self.transition_to_execution();
+                self.run_task(task, should_notify);
+                continue;
+            }
 
-                if (should_notify) {
-                    self.scheduler.try_notify_siblings_workers(self.get_worker_id());
+            self.park_worker();
+            self.local_state = LocalState::Executing;
+        }
+    }
+
+    fn park_worker(&mut self) {
+        if self
+            .scheduler
+            .transition_to_parked(self.local_state == LocalState::Searching, self.get_worker_id().unwrap())
+        {
+            trace!("Last searcher is trying to sleep, inspect all work sources");
+
+            // we transition ourself but we are last one who is going to sleep, let's recheck all queues, otherwise something may stuck there
+            let gc_empty = self.scheduler.global_queue.is_empty();
+
+            if !gc_empty {
+                debug!("Unparking during parking due to global queue having work");
+                self.scheduler.transition_from_parked(self.get_worker_id().unwrap());
+                return;
+            }
+
+            for access in &self.scheduler.worker_access {
+                if access.steal_handle.count() > 0 {
+                    debug!("Unparking during parking due to some steal queue having work");
+                    self.scheduler.transition_from_parked(self.get_worker_id().unwrap());
+                    return;
                 }
+            }
+        }
 
-                let waker = create_waker(task.clone());
-                let mut ctx = Context::from_waker(&waker);
-                match task.poll(&mut ctx) {
-                    super::task::async_task::TaskPollResult::Done => {
-                        // Literally nothing to do ;)
-                    }
-                    super::task::async_task::TaskPollResult::Notified => {
-                        // For now stupid respawn
-                        self.scheduler.spawn_from_runtime(task, &self.producer_consumer);
-                    }
+        let mut guard = self.own_interactor.mtx.lock().unwrap();
+
+        match self.own_interactor.state.0.compare_exchange(
+            WORKER_STATE_EXECUTING,
+            WORKER_STATE_SLEEPING_CV,
+            std::sync::atomic::Ordering::SeqCst,
+            std::sync::atomic::Ordering::SeqCst,
+        ) {
+            Ok(_) => {
+                debug!("Definite sleep decision");
+            }
+            Err(WORKER_STATE_NOTIFIED) => {
+                // We were notified before, so we shall continue
+                self.scheduler.transition_from_parked(self.get_worker_id().unwrap());
+
+                self.own_interactor
+                    .state
+                    .0
+                    .store(WORKER_STATE_EXECUTING, std::sync::atomic::Ordering::SeqCst);
+                debug!("Notified while try to sleep, searching again");
+                return;
+            }
+            Err(s) => {
+                panic!("Inconsistent state when parking: {}", s);
+            }
+        }
+
+        loop {
+            guard = self.own_interactor.cv.wait(guard).unwrap();
+
+            match self.own_interactor.state.0.compare_exchange(
+                WORKER_STATE_NOTIFIED,
+                WORKER_STATE_EXECUTING,
+                std::sync::atomic::Ordering::SeqCst,
+                std::sync::atomic::Ordering::SeqCst,
+            ) {
+                Ok(_) => {
+                    self.scheduler.transition_from_parked(self.get_worker_id().unwrap());
+                    debug!("Woken up from sleep");
+                    break;
                 }
-            } else {
-                let mut _guard = self.own_interactor.mtx.lock().unwrap();
-
-                // Scheduler can only move us to searching state under this lock, which means if we are here, there are no spurious changes of state, we can execute logic
-                let sleeping_approved = self.try_transition_to_sleeping();
-
-                if !sleeping_approved {
-                    continue; // For now simply loop again as apparently we were decided to be woken up
+                Err(_) => {
+                    continue; // spurious wake-up
                 }
+            }
+        }
+    }
 
-                self.local_state = LocalState::Sleeping;
+    fn run_task(&mut self, task: TaskRef, should_notify: bool) {
+        self.transition_to_executing();
 
-                // Even we decided sleeping, we again check the global queue just in case there is something already, if not, we will not miss it as our state is observer as sleeping already and CV would be notified
-                if !self.try_take_global_work_internal() {
-                    trace!("Worker is entering sleep under cond var!");
-                    _guard = self.own_interactor.cv.wait_while(_guard, |added| !*added).unwrap();
+        if should_notify {
+            self.scheduler.try_notify_siblings_workers(self.get_worker_id());
+        }
 
-                    *_guard = false;
-
-                    // When leaving this place, we are in searching state since scheduler woke us and before it did, it set our state
-                    self.local_state = LocalState::Searching;
-                    trace!("Worker going out of sleep!");
-                }
+        let waker = create_waker(task.clone());
+        let mut ctx = Context::from_waker(&waker);
+        match task.poll(&mut ctx) {
+            super::task::async_task::TaskPollResult::Done => {
+                // Literally nothing to do ;)
+            }
+            super::task::async_task::TaskPollResult::Notified => {
+                // For now stupid respawn
+                self.scheduler.spawn_from_runtime(task, &self.producer_consumer);
             }
         }
     }
@@ -184,15 +246,13 @@ impl WorkerInner {
             return (task, false);
         }
 
-        // Now we enter searching if there is no enough contention already. We use also local state to not need to do atomic operations if ie. we were already moved to searching by scheduler
-        let res = (self.local_state == LocalState::Searching) || self.scheduler.try_transition_worker_to_searching(&self.own_interactor);
+        // Now we enter searching if there is no enough contention already.
+        let res = self.try_transition_to_searching();
 
         if !res {
             trace!("Decided to not steal and sleep!");
             return (None, false); // Seems there is enough workers doing contended access, we shall sleep
         }
-
-        self.local_state = LocalState::Searching;
 
         // Next, try steal from other workers. Do this only, if no more than half the workers are
         // already searching for work.
@@ -248,14 +308,16 @@ impl WorkerInner {
     // `mem` to local_queue. Maybe we can optimize this in the future.
     //
     fn try_take_global_work(&self) -> (Option<TaskRef>, bool) {
-        if self.try_take_global_work_internal() {
-            (self.producer_consumer.pop(), true)
+        let taken = self.try_take_global_work_internal();
+
+        if taken > 0 {
+            (self.producer_consumer.pop(), taken > 1)
         } else {
             (None, false)
         }
     }
 
-    fn try_take_global_work_internal(&self) -> bool {
+    fn try_take_global_work_internal(&self) -> usize {
         let mut mem: [Option<TaskRef>; TAKE_GLOBAL_WORK_SIZE] = [const { None }; TAKE_GLOBAL_WORK_SIZE];
         let capacity = (self.producer_consumer.capacity() as usize).min(mem.len());
         let mut slice = &mut mem[0..capacity];
@@ -274,33 +336,26 @@ impl WorkerInner {
         }
 
         trace!("Taken from global queue {}", cnt);
-        cnt > 0
+        cnt
     }
 
-    ///
-    /// X -> Sleeping can be done only from worker
-    ///
-    fn try_transition_to_sleeping(&self) -> bool {
-        let res = self.own_interactor.state.transition_to_sleep();
+    fn try_transition_to_searching(&mut self) -> bool {
+        let mut res = true;
 
-        if self.local_state == LocalState::Searching {
-            self.scheduler.num_of_searching_workers.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+        if self.local_state != LocalState::Searching {
+            res = self.scheduler.try_transition_worker_to_searching();
+
+            if res {
+                self.local_state = LocalState::Searching;
+            }
         }
 
-        // For now we don't need anything more, let see later
         res
     }
 
-    ///
-    /// Searching -> Executing can be done only from worker
-    ///
-    fn transition_to_execution(&mut self) {
+    fn transition_to_executing(&mut self) {
         if self.local_state != LocalState::Executing {
-            if self.local_state == LocalState::Searching {
-                self.scheduler.num_of_searching_workers.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
-            }
-
-            self.own_interactor.state.transition_to_executing();
+            self.scheduler.transition_worker_to_executing();
             self.local_state = LocalState::Executing;
         }
     }

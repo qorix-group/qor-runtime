@@ -59,11 +59,6 @@ Run the example
 cargo run --example hello_world
 ```
 
-### Bazel build
-Run the example
-```bash
-bazel run //orchestration:basic --spawn_strategy=local
-```
 ### Devenv method for Nix environments
 
 [Devenv](https://devenv.sh/) is a tool that provides a fast, declarative,

@@ -18,9 +18,9 @@ use scheduler::{
 };
 
 pub mod core;
+pub mod futures;
 pub mod runtime;
 pub mod scheduler;
-
 ///
 /// Spawns a given future into runtime and let it execute on any of configured workers
 ///

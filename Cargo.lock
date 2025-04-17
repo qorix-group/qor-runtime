@@ -1362,7 +1362,7 @@ dependencies = [
 [[package]]
 name = "tracing-perfetto-sdk-layer"
 version = "0.12.0"
-source = "git+https://github.com/qorix-group/tracing-perfetto-sdk.git?branch=qor_adaptations#62759e172c1cdec2ad8fad18a568a6b994316b35"
+source = "git+https://github.com/qorix-group/tracing-perfetto-sdk.git?branch=qor_adaptations#1ac565c2bff2715a3e34714e5777e28572c6e6d6"
 dependencies = [
  "bytes",
  "cxx",
@@ -1382,7 +1382,7 @@ dependencies = [
 [[package]]
 name = "tracing-perfetto-sdk-schema"
 version = "0.12.0"
-source = "git+https://github.com/qorix-group/tracing-perfetto-sdk.git?branch=qor_adaptations#62759e172c1cdec2ad8fad18a568a6b994316b35"
+source = "git+https://github.com/qorix-group/tracing-perfetto-sdk.git?branch=qor_adaptations#1ac565c2bff2715a3e34714e5777e28572c6e6d6"
 dependencies = [
  "anyhow",
  "prost",
@@ -1393,10 +1393,11 @@ dependencies = [
 [[package]]
 name = "tracing-perfetto-sdk-sys"
 version = "0.12.0"
-source = "git+https://github.com/qorix-group/tracing-perfetto-sdk.git?branch=qor_adaptations#62759e172c1cdec2ad8fad18a568a6b994316b35"
+source = "git+https://github.com/qorix-group/tracing-perfetto-sdk.git?branch=qor_adaptations#1ac565c2bff2715a3e34714e5777e28572c6e6d6"
 dependencies = [
  "anyhow",
  "bytes",
+ "cc",
  "cxx",
  "cxx-build",
 ]

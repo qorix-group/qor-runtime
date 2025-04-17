@@ -1,9 +1,9 @@
 [package]
 name = "async_runtime"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
-foundation = { path = "../foundation" }
+foundation.workspace = true
 
-iceoryx2-pal-concurrency-sync = "0.5.0"
+iceoryx2-pal-concurrency-sync.workspace = true

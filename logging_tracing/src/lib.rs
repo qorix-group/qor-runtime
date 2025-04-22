@@ -20,10 +20,10 @@ use tracing_appender::non_blocking::WorkerGuard;
 use tracing_perfetto_sdk_layer::{self as layer, NativeLayer};
 use tracing_perfetto_sdk_schema as schema;
 use tracing_perfetto_sdk_schema::trace_config;
+use tracing_subscriber::fmt;
 use tracing_subscriber::fmt::format;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::Layer;
-use tracing_subscriber::{fmt, EnvFilter};
 
 #[derive(Debug, Clone, Copy)]
 pub enum LogMode {
@@ -233,14 +233,9 @@ impl TracingLibrary {
         let date_time = self.format_timestamp(seconds);
 
         // Generate the filename
-        let current_dir = env::current_dir().unwrap();
-        let build_dir = current_dir.join("build");
+        let tmp_dir = PathBuf::from("/tmp");
+        let filename = format!("{}/trace_{}_{}.pftrace", tmp_dir.display(), process_name, date_time);
 
-        // Create the build directory if it doesn't exist
-        if !Path::new(&build_dir).exists() {
-            fs::create_dir(&build_dir).unwrap();
-        }
-        let filename = format!("{}/trace_{}_{}.pftrace", build_dir.display(), process_name, date_time);
         PathBuf::from(filename)
     }
 

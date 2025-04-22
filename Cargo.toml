@@ -40,6 +40,6 @@ tracing-perfetto-sdk-sys = "0.12.0"
 
 # TODO: Pin the revision id to make builds reproducible
 [patch.crates-io]
-tracing-perfetto-sdk-layer = { git = "https://github.com/qorix-group/tracing-perfetto-sdk.git", branch = "bazel_build" }
-tracing-perfetto-sdk-schema = { git = "https://github.com/qorix-group/tracing-perfetto-sdk.git", branch = "bazel_build" }
-tracing-perfetto-sdk-sys = { git = "https://github.com/qorix-group/tracing-perfetto-sdk.git", branch = "bazel_build" }
+tracing-perfetto-sdk-layer = { git = "https://github.com/qorix-group/tracing-perfetto-sdk.git", branch = "qor_adaptations" }
+tracing-perfetto-sdk-schema = { git = "https://github.com/qorix-group/tracing-perfetto-sdk.git", branch = "qor_adaptations" }
+tracing-perfetto-sdk-sys = { git = "https://github.com/qorix-group/tracing-perfetto-sdk.git", branch = "qor_adaptations" }

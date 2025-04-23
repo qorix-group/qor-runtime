@@ -18,7 +18,7 @@ foundation.path = "foundation"
 logging_tracing.path = "logging_tracing"
 orchestration.path = "orchestration"
 
-bytes = "1.9.0"
+#bytes = "1.9.0"
 iceoryx2 = "0.5.0"
 iceoryx2-bb-container = "0.5.0"
 iceoryx2-bb-derive-macros = "0.5.0"

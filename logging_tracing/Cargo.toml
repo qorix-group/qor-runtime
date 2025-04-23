@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-bytes.workspace = true
+#bytes.workspace = true
 tracing.workspace = true
 tracing-appender.workspace = true
 tracing-perfetto-sdk-schema.workspace = true

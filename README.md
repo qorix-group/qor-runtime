@@ -1,3 +1,5 @@
+This Repo is Archived and devlopment moved here - https://github.com/eclipse-score/inc_orchestrator 
+
 # Qorix Runtime
 
 ![Build](https://github.com/qorix-group/qor-runtime/actions/workflows/rust.yml/badge.svg)

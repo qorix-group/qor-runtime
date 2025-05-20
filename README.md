@@ -1,4 +1,4 @@
-This Repo is Archived and devlopment moved here - https://github.com/eclipse-score/inc_orchestrator 
+This Repo is Archived and development is moved here - https://github.com/eclipse-score/inc_orchestrator 
 
 # Qorix Runtime
 
